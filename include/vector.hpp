@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 
 namespace sjtu 
 {
@@ -260,7 +261,10 @@ public:
 
 		start = (T*)malloc(c * sizeof(T));
 		end_of_storage = start + c;
-		memcpy(start, other.start, n * sizeof(T));
+
+		for (int i = 0; i < n; i++)//不能简单地memcpy，有可能在元素内部还有动态指针，用构造函数来保证“深拷贝”的可靠性！！！
+			new (start + i) T(*(other.start + i));
+
 		finish = start + n;
 	}
 	vector(const std::vector<T> &other)

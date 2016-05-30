@@ -1,6 +1,3 @@
-/**
- * implement a container like std::map
- */
 #ifndef SJTU_MAP_HPP
 #define SJTU_MAP_HPP
 
@@ -10,13 +7,16 @@
 #include "utility.hpp"
 #include "exceptions.hpp"
 
-namespace sjtu {
-
-template<
-	class Key,
-	class T,
-	class Compare = std::less<Key>
-> class map {
+namespace sjtu 
+{
+/**
+ * a container like std::map
+ */
+template<class Key, class T, class Compare = std::less<Key>, class BalanceTree = BST<pair<Key, T>, std::select1st<pair<Key, T> >, Compare> >
+class map
+{
+private:
+	BalanceTree bt;
 public:
 	/**
 	 * the internal type of data.
@@ -103,11 +103,13 @@ public:
 			// And other methods in iterator.
 			// And other methods in iterator.
 	};
+
 	/**
 	 * TODO two constructors
 	 */
 	map() {}
 	map(const map &other) {}
+	
 	/**
 	 * TODO assignment operator
 	 */
@@ -189,6 +191,43 @@ public:
 	iterator find(const Key &key) {}
 	const_iterator find(const Key &key) const {}
 };
+
+template<typename Key,typename T,class KeyOfElem, class Compare=std::less<Key> >
+class BST
+{
+public:
+	struct node
+	{
+		node* left, right;
+		T *data;
+
+		node() :left(nullptr), right(nullptr), data(nullptr) {}
+		node(node *l, node *r, const T &d) :left(l), right(r), data(new T(d)) {}
+		node(const node &rhs) :left(rhs.left), right(rhs.right), data(new T(*(rhs.data)){}
+		~node() 
+		{
+			if (!data)
+				delete data; 
+			data = nullptr;
+		}
+	};
+
+private:
+	const node *nil = node();
+	node *leftmost;
+	node *rightmost;
+	node *root;
+
+	size_t nodeCnt;
+	Compare cmp;
+
+public:
+	BST() :leftmost(nil), rightmost(nil), root(nullptr) {}
+	BST()
+
+};
+
+
 
 }
 

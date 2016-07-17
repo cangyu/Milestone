@@ -11,7 +11,6 @@
 
 namespace sjtu 
 {
-
 //A container like std::priority_queue which is a heap internal.
 template<typename T, class Compare = std::less<T>, typename HeapTypeDef = fibonacci_heap<T, Compare> >
 class priority_queue 
@@ -258,26 +257,37 @@ private:
 		}
 
 		//从双链表中移除节点t
-		static void remove_single(fibonacci_node &t)
+		static fibonacci_node* remove_single(fibonacci_node* &t)
 		{
-			t.left->right = t.right;
-			t.right->left = t.left;
+			fibonacci_node* z = t;
+			
+			//更新左右两边的连接
+			t->left->right = t->right;
+			t->right->left = t->left;
+
+			//更新原指针的指向
+			if (t->right == t)
+				t = nullptr;
+			else
+				t = t->right;
+
+			//修正取出的节点的左右指针，指向自己
+			z->left = z->right = z;
+
+			return z;
 		}
 
 		//当前子树的深拷贝
 		fibonacci_node* copy() const
 		{
-			auto z = new fibonacci_node(*this);
-			
-			if (child == nullptr)
-				return z;
-			else
+			fibonacci_node* z = new fibonacci_node(*this);
+			if (child)
 			{
 				auto w = child;
 				do {
 					auto cur_child_copy = w->copy();
 					cur_child_copy->parent = z;
-					
+
 					if (z->child == nullptr)
 						z->child = cur_child_copy;
 					else
@@ -286,6 +296,7 @@ private:
 					w = w->right;
 				} while (w != child);
 			}
+			return z;
 		}
 
 		//释放当前子树
@@ -293,13 +304,7 @@ private:
 		{
 			while (child)
 			{
-				remove_single(*child);
-				auto z = child;
-				if (child->right == child)
-					child = nullptr;
-				else
-					child = child->right;
-
+				auto z = remove_single(child);
 				z->release();
 			}
 			delete this;//需要自己删除自己。。。
@@ -332,74 +337,81 @@ private:
 		swap(cmp, rhs.cmp);
 	}
 
+	//复制一个fibonacci_heap到当前堆中
+	//Copy constructor的辅助函数
 	void duplicate(const fibonacci_heap &rhs)
 	{
 		auto w = rhs.root;
 		do {
-			auto z = w->copy();
+			auto z = w->copy();//拷贝该节点连同其子树，深拷贝
 			insert(*z);
 			w = w->right;
 		} while (w != rhs.root);
 	}
 
+	//释放当前fibonacci_heap中的所有节点
+	//Destructor的辅助函数
 	void destroy()
 	{
-		while (root)
+		while (root)//每remove_single后root的指向会自动改变
 		{
-			fibonacci_node<T>::remove_single(*root);
-			auto z = root;
-
-			if (root->right == root)
-				root = nullptr;
-			else
-				root = root->right;
-
+			auto z = fibonacci_node<T>::remove_single(root);
 			z->release();
 		}
 		n = 0;
 	}
 
 public:
+	//Default constructor
 	fibonacci_heap() :n(0), root(nullptr), cmp(new Compare()) {}
 
+	//Copy constructor 
 	fibonacci_heap(const fibonacci_heap &rhs) :n(rhs.n), root(nullptr), cmp(new Compare(*rhs.cmp))
 	{
 		duplicate(rhs); 
 	}
 
+	//Destructor
 	~fibonacci_heap() 
 	{
 		delete cmp;
 		destroy();
 	}
 
+	//Assignment operator
 	fibonacci_heap& operator=(fibonacci_heap rhs)
 	{
 		exchange(rhs);
 		return *this;
 	}
 
+	//Get number of fibonacci_node in current heap.
 	size_t size() const
 	{ 
 		return n;
 	}
 
+	//Check empty or not.
 	bool empty() const 
 	{ 
 		return n == 0;
 	}
 
+	//Get the key of the root node.
 	const T& front() const 
 	{ 
 		return root->key;
 	}
 
+	//Push a new fibonacci_node into current heap with given key.
 	void push_back(const T &_key) 
 	{ 
 		auto tmp = new fibonacci_node<T>(_key);
 		insert(*tmp);
+		n++;
 	}
 
+	//Pop root node and release it.
 	void pop_front()
 	{ 
 		auto tmp= extract_root();
@@ -407,26 +419,27 @@ public:
 	}
 
 private:
-	//在根链表中插入一个节点
+	//在根链表中插入一个节点,连同其子树
 	void insert(fibonacci_node<T> &x)
 	{
-		if (root == nullptr)
+		if (!root)
 			root = &x;
 		else
 		{
 			fibonacci_node<T>::insert_before(*root, x);
-			if ((*cmp)(x.key, root->key))
+			if ((*cmp)(root->key, x.key))
 				root = &x;
 		}
-		++n;
 	}
 
 	//取出根节点
 	fibonacci_node<T>* extract_root()
 	{
-		auto z = root;
-		if(z)
+		if (!root)
+			return root;
+		else
 		{
+			//若有孩子链表，则将其parent置为nullptr，并移入根链表
 			if (root->child)
 			{
 				auto t = root->child;
@@ -437,19 +450,18 @@ private:
 
 				fibonacci_node<T>::insert_before(*root, *root->child);
 			}
-			
-			fibonacci_node<T>::remove_single(*root);
 
-			if (z->right == z)
-				root = nullptr;
-			else
-			{
-				root = z->right;
+			//取出根节点
+			auto z= fibonacci_node<T>::remove_single(root);
+			z->child = nullptr;
+			n--;
+
+			//合并根链表中重复度数的节点并更新root
+			if (n > 1)
 				consolidate();
-			}
-			--n;
+
+			return z;
 		}
-		return z;
 	}
 
 private:
@@ -457,24 +469,21 @@ private:
 	//合并完成后更新root
 	void consolidate()
 	{
-		auto A = vector<fibonacci_node<T>*>(std::ceil(std::log2(n*1.0)), nullptr);
+		double phi = 0.5*(1.0 + std::sqrt(5));//黄金分割率
+		size_t num = std::ceil(std::log2(1.0*n) / std::log2(phi)) + 1;//D(n)<=floor(log2(n)/log2(phi))
+		auto A = vector<fibonacci_node<T>*>(num, nullptr);
 
+		//逐次取出根链表中的节点，并合并有相同degree的节点到A中
 		while (root)
 		{
-			fibonacci_node<T>::remove_single(*root);
-			auto x = root;
+			auto x = fibonacci_node<T>::remove_single(root);
 			auto d = x->degree;
-
-			if (root->right == root)
-				root = nullptr;
-			else
-				root = root->right;
 
 			while (A[d])
 			{
 				auto y = A[d];
-				if ((*cmp)(y->key, x->key))
-					std::swap(x, y);//使得x上的关键字不大于y上的关键字
+				if ((*cmp)(x->key, y->key))
+					std::swap(x, y);
 				fibonacci_node<T>::link(*x, *y);//将y链入x的孩子列表
 				A[d] = nullptr;
 				++d;
@@ -482,6 +491,7 @@ private:
 			A[d] = x;
 		}
 
+		//重构根链表
 		for (auto i = 0; i < A.size(); i++)
 		{
 			if (A[i])
@@ -491,15 +501,12 @@ private:
 				else
 				{
 					fibonacci_node<T>::insert_before(*root, *A[i]);
-					if ((*cmp)(A[i]->key, root->key))
+					if ((*cmp)(root->key, A[i]->key))
 						root = A[i];
 				}
 			}
 		}
 	}
-
 };
-
 }
-
 #endif

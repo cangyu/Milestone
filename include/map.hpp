@@ -9,190 +9,216 @@
 
 namespace sjtu 
 {
-	//A container like std::map.
 	template<typename KeyTypeDef, typename ValTypeDef, class Compare = std::less<KeyTypeDef>>
 	class map
 	{
-	private:
-		//Internal type used in selected balance tree.
-		typedef pair<const KeyTypeDef, ValTypeDef> ElemTypeDef;
-
-		//Functor used in selected balance tree.
-		class _cmp_funcor
+		typedef pair<const KeyTypeDef, ValTypeDef> value_type;
+		class _getKeyFunctor
 		{
-		private:
-			Compare cmp;
-
 		public:
-			_cmp_funcor() = default;
-			~_cmp_funcor() = default;
-			bool operator()(const ElemTypeDef &lhs, const ElemTypeDef &rhs) const 
+			KeyTypeDef& operator() (const value_type& _elem) const
 			{
-				return cmp(lhs.first, rhs.first);
+				return _elem.first; 
 			}
 		};
 
-		//Type of the balance tree inside a map.
-		typedef TreeTypeDef rb_tree<ElemTypeDef, _cmp_funcor>;
+		typedef rb_tree<KeyTypeDef, value_type, _getKeyFunctor, Compare> BalanceTreeTypeDef;
 
-		//Internal tree
-		TreeTypeDef *t;
+		typedef typename BalanceTreeTypeDef::iterator iterator;
+		typedef typename BalanceTreeTypeDef::const_iterator const_iterator;
 
-		//helper function for operation=
-		void exchange(map &rhs)
+		BalanceTreeTypeDef *bt;
+
+		iterator find(const KeyTypeDef& _key)
 		{
-			std::swap(t, rhs.t);
+			return bt->find(_key);
+		}
+		const_iterator find(const KeyTypeDef& _key) const
+		{
+			return bt->find(_key);
 		}
 
-	protected:
-		//Iterators
-		typedef typename TreeTypeDef::iterator iterator;
-		typedef typename TreeTypeDef::const_iterator const_iterator;
-
-	public:
-		//Constructors
-		map() {}
-		map(const map &rhs) 
+		pair<iterator, bool> insert(const value_type &value) 
 		{
-
+			return bt->insert(value);
 		}
 
-		//Assignment operator
-		map& operator=(map rhs)
+		void erase(iterator pos)
 		{
-			exchange(rhs);
-			return *this;
+			bt->erase(pos);
 		}
 
-		//Destructor
-		~map() 
-		{
-			delete t;
-			t = nullptr;
-		}
-
-		//Member function at
-		ValTypeDef &at(const KeyTypeDef &key) 
-		{
-
-		}
-		const ValTypeDef &at(const KeyTypeDef &key) const
-		{
-
-		}
-
-		//operator[]
-		ValTypeDef& operator[](const KeyTypeDef &key)
-		{
-
-		}
-		const ValTypeDef& operator[](const KeyTypeDef &key) const
-		{
-
-		}
-
-
-		//get starting position
-		iterator begin()
-		{
-
-		}
-		const_iterator cbegin() const
-		{
-
-		}
-
-		//get ending position, next to last element.
-		iterator end()
-		{
-
-		}
-		const_iterator cend() const
-		{
-
-		}
-
-		//checks whether the container is empty
-		bool empty() const
-		{
-
-		}
-
-		//returns the number of elements.
-		size_t size() const 
-		{
-
-		}
-
-		//clears the contents
-		void clear()
-		{
-
-		}
-
-		/**
-		* insert an element.
-		* return a pair, the first of the pair is
-		*   the iterator to the new element (or the element that prevented the insertion),
-		*   the second one is true if insert successfully, or false.
-		*/
-		pair<iterator, bool> insert(const ElemTypeDef &elem)
-		{
-
-		}
-
-		/**
-		* erase the element at pos.
-		* throw if pos pointed to a bad element (pos == this->end() || pos points an element out of this)
-		*/
-		void erase(iterator pos) 
-		{
-
-		}
-
-		/**
-		* Returns the number of elements whose key compares equivalent to the specified argument.
-		* The answer is either 1 or 0, since this container does not allow duplicates.
-		* The default method of check the equivalence is !(a < b || b > a)
-		*/
-		size_t count(const KeyTypeDef &key) const 
-		{
-
-		}
-
-		/**
-		* Finds an element with key equivalent to key.
-		* key value of the element to search for.
-		* Iterator to an element with key equivalent to key.
-		* If no such element is found, past-the-end (see end()) iterator is returned.
-		*/
-		iterator find(const KeyTypeDef &key)
-		{
-
-		}
-		const_iterator find(const KeyTypeDef &key) const
-		{
-
-		}
 	};
 
-
-	//Red-Black Tree for implementation of map.
-	template<typename ElemTypeDef, class Compare>
+	template<typename KeyTypeDef, typename ElemTypeDef, class GetKeyFunc, class Compare>
 	class rb_tree
 	{
 	private:
 		typedef enum { RED = 0, BLACK = 1 } ColorTypeDef;
+		struct rb_node
+		{
+			ElemTypeDef elem;
+			rb_node *parent, *left, *right;
+			ColorTypeDef color;
+		};
 
+		size_t nodeCnt;
+		rb_node* header;
+		Compare cmp;
+		GetKeyFunc getKey;
+
+	public:
+		class const_iterator;
 		class iterator
 		{
+		private:
+			rb_node* node;
+			rb_tree* ascription;
 
+		public:
+			iterator(rb_node* _nPtr = nullptr, rb_tree* _tPtr = nullptr) :node(_nPtr), ascription(_tPtr) {}
+			iterator(const iterator& rhs) :node(rhs.node), ascription(rhs.ascription) {}
+
+			ElemTypeDef& operator*() const { return node->elem; }
+			ElemTypeDef* operator->() const noexcept { return &(operator*()); }
+
+			iterator operator++(int) 
+			{
+				iterator tmp = *this;
+				increment();
+				return tmp;
+			}
+			iterator& operator++()
+			{
+				increment();
+				return *this;
+			}
+
+			iterator operator--(int) 
+			{
+				iterator tmp = *this;
+				decrement();
+				return *this;
+			}
+			iterator& operator--() 
+			{
+				decrement();
+				return *this;
+			}
+
+			bool operator==(const iterator &rhs) const 
+			{
+				return ascription == rhs.ascription && node == rhs.node;
+			}
+			bool operator==(const const_iterator &rhs) const 
+			{
+				return ascription == rhs.ascription && node == rhs.node;
+			}
+
+			bool operator!=(const iterator &rhs) const 
+			{
+				return !operator==(rhs);
+			}
+			bool operator!=(const const_iterator &rhs) const 
+			{
+				return !operator==(rhs);
+			}
+
+			bool isAscriptedTo(void* _id) const
+			{
+				return id && id == ascription;
+			}
+			bool isValid() const
+			{
+				if (ascription == nullptr || node == nullptr)
+					return false;
+
+				//检查是否指向了end()
+				if (ascription->header && ascription->header == node)
+					return false;
+
+				return true;
+			}
+			
+		private:
+			void increment()
+			{
+
+			}
+
+			void decrement()
+			{
+
+			}
 		};
 
 		class const_iterator
 		{
 
 		};
+
+		iterator find(const KeyTypeDef& _key)
+		{
+			rb_node *cur = header->parent;
+			rb_node *post = header;
+
+			while (cur)
+			{
+				if (cmp(getKey(cur->elem), _key))
+					cur = cur->right;
+				else
+				{
+					post = cur;
+					cur = cur->left;
+				}
+			}
+
+			if (post == header || cmp(_key, getKey(post->elem)))
+				return end();
+			else
+				return iterator(post, this);
+		}
+
+		pair<iterator, bool> insert(const ElemTypeDef& _val)
+		{
+			rb_node *y = header;
+			rb_node *x = header->parent;//root
+			bool cmpAns = true;
+
+			while (x)
+			{
+				y = x;
+				cmpAns = cmp(getKey(_val), getKey(x->elem));
+				x = cmpAns ? x->left : x->right;
+			}
+
+			iterator j(y, this);
+			if (cmpAns)
+			{
+				if (j == begin())
+					return pair<iterator, bool>(_insert(x, y, _val), true);
+				else
+					--j;
+			}
+			if (cmp(getKey(j->elem), getKey(_val)))
+				return pair<iterator, bool>(_insert(x, y, _val), true);
+
+			return pair<iterator, bool>(j, false);
+		}
+
+		void erase(iterator pos)
+		{
+			if (!pos.isAscriptedTo(this) || !pos.isValid())
+				throw invalid_iterator();
+
+			_erase(pos);
+		}
+
+	private:
+		pair<iterator, bool> _insert(rb_node *x, rb_node *y, const ElemTypeDef& v)
+		{
+
+		}
 
 
 	};

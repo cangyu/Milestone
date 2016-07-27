@@ -60,10 +60,18 @@ namespace sjtu
 			ElemTypeDef elem;
 			rb_node *parent, *left, *right;
 			ColorTypeDef color;
+
+			rb_node(const ElemTypeDef& _e, rb_node *_p = nullptr, rb_node *_l = nullptr, rb_node *_r = nullptr) :
+				elem(_e),
+				parent(_p),
+				left(_l),
+				right(_r),
+				color(RED)
+			{}
 		};
 
 		size_t nodeCnt;
-		rb_node* header;
+		rb_node *header;
 		Compare cmp;
 		GetKeyFunc getKey;
 
@@ -215,12 +223,127 @@ namespace sjtu
 		}
 
 	private:
-		pair<iterator, bool> _insert(rb_node *x, rb_node *y, const ElemTypeDef& v)
+		iterator _insert(rb_node *x, rb_node *y, const ElemTypeDef& v)
 		{
+			rb_node *z = new rb_node(v, y);
 
+			if (y == header || x || cmp(getKey(v), getKey(y->elem)))
+			{
+				y->left = z;
+				if (y == header)
+				{
+					header->parent = z;
+					header->left = z;
+				}
+				else if (y = header->left)
+					header->left = z;
+			}
+			else
+			{
+				y->right = z;
+				if (y == header->right)
+					header->right = z;
+			}
+
+			_rebalance(z, header->parent);
+			++nodeCnt;
+
+			return iterator(z, this);
 		}
 
+		void _rebalance(rb_node* x, rb_node* &r)
+		{
+			x->color = RED;
+			while (x != r && x->parent->color == RED)
+			{
+				if (x->parent == x->parent->parent->left)//父节点作为左儿子存在
+				{
+					rb_node *y = x->parent->parent->right;//x的伯父节点
+					if (y && y->color == RED)//伯父节点也是RED，更换颜色再继续向上调整即可
+					{
+						x->parent->color = BLACK;
+						y->color = BLACK;
+						x->parent->parent->color = RED;
+						x = x->parent->parent;//继续调整
+					}
+					else
+					{
+						if (x == x->parent->right)//LR，先做一个左旋转，转换成LL
+						{
+							x = x->parent;
+							_left_rotate(x, r);
+						}
+						x->parent->color = BLACK;
+						x->parent->parent->color = RED;
+						_right_rotate(x->parent->parent, r);
+					}
+				}
+				else//父节点作为右儿子存在
+				{
+					rb_node *y = x->parent->parent->left;//x的伯父节点
+					if (y && y->color == RED)//同上
+					{
+						x->parent->color = BLACK;
+						y->color = BLACK;
+						x->parent->parent->color = RED;
+						x = x->parent->parent;
+					}
+					else
+					{
+						if (x == x->parent->left)//RL，先做一个右旋转，转换成RR
+						{
+							x = x->parent;
+							_right_rotate(x, r);
+						}
+						x->parent->color = BLACK;
+						x->parent->parent->color = RED;
+						_left_rotate(x->parent->parent, r);
+					}
+				}
+			}
+			r->color = BLACK;
+		}
 
+		void _left_rotate(rb_node* x, rb_node* &r)
+		{
+			rb_node *y = x->right;
+			x->right = y->left;
+			if (y->left)
+				y->left->parent = x;
+			y->parent = x->parent;
+
+			if (x == r)
+				r = y;
+			else if (x == x->parent->left)
+				x->parent->left = y;
+			else
+				x->parent->right = y;
+			y->left = x;
+			x->parent = y;
+		}
+
+		void _right_rotate(rb_node* x, rb_node* &r)
+		{
+			rb_node *y = x->left;
+			x->left = y->right;
+			if (y->right)
+				y->right->left = x;
+			y->parent = x->parent;
+
+			if (x == r)
+				r = y;
+			else if (x == x->parent->left)
+				x->parent->left = y;
+			else
+				x->parent->right = y;
+			y->right = x;
+			x->parent = y;
+		}
+
+		void _erase(iterator pos)
+		{
+			//TODO
+		}
 	};
 }
 

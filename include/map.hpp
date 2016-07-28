@@ -245,13 +245,13 @@ namespace sjtu
 					header->right = z;
 			}
 
-			_rebalance(z, header->parent);
+			_insert_rebalance(z, header->parent);
 			++nodeCnt;
 
 			return iterator(z, this);
 		}
 
-		void _rebalance(rb_node* x, rb_node* &r)
+		void _insert_rebalance(rb_node* x, rb_node* &r)
 		{
 			x->color = RED;
 			while (x != r && x->parent->color == RED)
@@ -342,7 +342,181 @@ namespace sjtu
 
 		void _erase(iterator pos)
 		{
-			//TODO
+			rb_node *y = _erase_rebalance(pos->node, header->parent, header->left, header->right);
+			delete y;
+			--nodeCnt;
+		}
+
+		rb_node* _erase_rebalance(rb_node* z, rb_node* &r, rb_node* &lm, rb_node* &rm)
+		{
+			rb_node *y = z;
+			rb_node *x = nullptr;
+			rb_node *xp = nullptr;
+
+			//x作为待删节点的孩子节点
+			if (!y->left)
+				x = y->right;
+			else if (!y->right)
+				x = y->left;
+			else
+			{
+				y = y->right;
+				while (y->left)
+					y = y->left;
+				x = y->right;
+			}
+
+			//re-link
+			if (y != z)//z有两个孩子
+			{
+				//处理z的左子树
+				z->left->parent = y;
+				y->left = z->left;
+
+				//处理z的右子树，有特殊情况，要分开考虑
+				if (y == z->right)
+					xp = y;
+				else
+				{
+					xp = y->parent;
+					if (x)
+						x->parent = xp;
+					y->parent->left = x;
+					y->right = z->right;
+					z->right->parent = y;
+				}
+
+				//z的parent的孩子指针的指向
+				if (r == z)
+					r = y;
+				else if (z->parent->left == z)
+					z->parent->left = y;
+				else
+					z->parent->right = y;
+				y->parent = z->parent;
+
+				//SGI的实现中不是交换节点中的元素，而是re-link替身节点和待删除节点，
+				//然后swap两者的颜色，到达相同的效果
+				std::swap(y->color, z->color);
+
+				//让y指向待删除节点
+				y = z;
+			}
+			else//z只有一个孩子或没有孩子
+			{
+				xp = y->parent;
+				if (x)
+					x->parent = xp;
+
+				if (r == z)
+					r = x;
+				else if (z->parent->left == z)
+					z->parent->left = x;
+				else
+					z->parent->right = x;
+
+				if (lm == z)
+					lm = z->right ? _minimum(x) : z->parent;//由于z只有一个孩子或没有孩子，若z是leftmost，则没有左孩子，若此时z的右孩子为null，则z是叶子节点，leftmost即为z的parent，否则leftmost是x子树上的最左
+
+				if (rm == z)
+					rm = z->left ? _maximum(x) : z->parent;//分析同上
+			}
+
+			//已经将待删节点y取下了，若是red可以直接return，否则要做调整后才能return
+			//到这里所有情况都被简化成最基本的3种了：red leaf、black leaf 和 带一个child
+			if (y->color != RED)
+			{
+				//到这步只可能是待删点是black leaf
+				//若待删点是只有一个孩子，则孩子节点x必为red，直接pass 
+				//若待删点是red leaf， 在上面的if就被pass了
+				while (x != r && (!x || x->color == BLACK)//x是待调整节点
+				{
+					if (x == xp->left)
+					{
+						rb_node *w = xp->right;
+
+						//若兄弟节点是red，则父节点必然是black，兄弟节点的两个子节点也是black，通过旋转与调色将其转换为下面的routine
+						if (w->color == RED)
+						{
+							w->color = BLACK;
+							xp->color = RED;
+							_left_rotate(xp, r);
+							w = xp->right;
+						}
+
+						//兄弟节点也是black，根据兄弟节点的孩子的情况分3种情况处理
+						if ((!w->left || w->left->color == BLACK) && (!w->right || w->right->color == BLACK))//无红节点
+						{
+							//更新待调整节点为父节点，继续调整
+							//此处不更新xp为black:
+							//若xp为red，则会跳出循环后被后面的if检测到，然后将xp的颜色改为black，树刚好平衡；
+							//若xp为black，则还是在while循环中继续调整。
+							w->color = RED;
+							x = xp;
+							xp = xp->parent;
+						}
+						else
+						{
+							if (!w->right || w->right->color == BLACK)//只有一个内侧红节点
+							{
+								if (w->left)//这个if是否多余？
+									w->left->color = BLACK;
+								w->color = RED;
+								_right_rotate(w, r);
+								w = xp->right;
+							}
+
+							//共同处理两个红孩子和一个外侧红孩子
+							w->color = xp->color;
+							xp->color = BLACK;
+							if (w->right)//这个if是否多余？
+								w->right->color = BLACK;
+							_left_rotate(xp, r);
+							break;
+						}
+					}
+					else
+					{
+						rb_node *w = xp->left;
+						if (w->color == RED)
+						{
+							w->color = BLACK;
+							xp->color = RED;
+							_right_rotate(xp, r);
+							w = xp->left;
+						}
+
+						if ((!w->left || w->left->color == BLACK) && (!w->right || w->right->color == BLACK))
+						{
+							w->color = RED;
+							x = xp;
+							xp = xp->parent;
+						}
+						else
+						{
+							if (!w->left || w->left->color == BLACK)
+							{
+								if (w->right)
+									w->right->color = BLACK;
+								w->color = RED;
+								_left_rotate(w, r);
+								w = xp->left;
+							}
+
+							w->color = xp->color;
+							xp->color = BLACK;
+							if (w->left)
+								w->left->color = BLACK;
+							_right_rotate(xp, r);
+							break;
+						}
+					}
+				}
+				if (x)
+					x->color = BLACK;
+			}
+
+			return y;
 		}
 	};
 }

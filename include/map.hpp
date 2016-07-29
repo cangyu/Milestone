@@ -149,20 +149,176 @@ namespace sjtu
 			}
 			
 		private:
+			//若iterator指向二叉序第一个元素，increment后是正常的二叉序第二个元素
+			//若iterator指向二叉序最后一个元素，increment后是header
+			//若iterator指向header，incerment后是最后一个元素的最左node，这个行为是未定义的
 			void increment()
 			{
+				if (node->right)
+				{
+					node = node->right;
+					while (node->left)
+						node = node->left;
+				}
+				else
+				{
+					rb_node *y = node->parent;
+					while (node == y->right)
+					{
+						node = y;
+						y = y->parent;
+					}
 
+					//Corner case：node原先指向root且root没有右孩子，所以经过上面的while后node在header，y在root，这时不能将node设为y
+					if (node->right != y)
+						node = y;
+				}
 			}
 
+			//若iterator指向二叉序第一个元素，decrement后是header
+			//若iterator指向二叉序最后一个元素，decrement后是正常的前一个node
+			//若iterator指向header，decrement后是第一个node的最右
 			void decrement()
 			{
+				if (node->color == RED && node->parent->parent == node)//node有可能指向header，因为header和root都具有经过两个连续的parent后指向自己的性质，还要用颜色来限定确保是header
+					node = node->right;
+				else if (node->left)
+				{
+					node = node->left;
+					while (node->right)
+						node = node->right;
+				}
+				else
+				{
+					rb_node *y = node->parent;
+					while (node == y->left)
+					{
+						node = y;
+						y = y->parent;
+					}
 
+					node = y;//若node指向第一个节点，则--后指向header
+				}
 			}
 		};
 
 		class const_iterator
 		{
+		private:
+			rb_node* node;
+			rb_tree* ascription;
 
+		public:
+			const_iterator(rb_node* _nPtr = nullptr, rb_tree* _tPtr = nullptr) :node(_nPtr), ascription(_tPtr) {}
+			const_iterator(const const_iterator& rhs) :node(rhs.node), ascription(rhs.ascription) {}
+			const_iterator(const iterator& rhs) :node(rhs.node), ascription(rhs.ascription) {}
+
+			const ElemTypeDef& operator*() const { return node->elem; }
+			const ElemTypeDef* operator->() const noexcept { return &(operator*()); }//返回得到的指针可以被修改，但是指针指向的内容不能被修改
+
+			const_iterator operator++(int)
+			{
+				const_iterator tmp = *this;
+				increment();
+				return tmp;
+			}
+			const const_iterator& operator++()
+			{
+				increment();
+				return *this;
+			}
+
+			const_iterator operator--(int)
+			{
+				const_iterator tmp = *this;
+				decrement();
+				return *this;
+			}
+			const const_iterator& operator--()
+			{
+				decrement();
+				return *this;
+			}
+
+			bool operator==(const iterator &rhs) const
+			{
+				return ascription == rhs.ascription && node == rhs.node;
+			}
+			bool operator==(const const_iterator &rhs) const
+			{
+				return ascription == rhs.ascription && node == rhs.node;
+			}
+
+			bool operator!=(const iterator &rhs) const
+			{
+				return !operator==(rhs);
+			}
+			bool operator!=(const const_iterator &rhs) const
+			{
+				return !operator==(rhs);
+			}
+
+			bool isAscriptedTo(void* _id) const
+			{
+				return id && id == ascription;
+			}
+			bool isValid() const
+			{
+				if (ascription == nullptr || node == nullptr)
+					return false;
+
+				//检查是否指向了end()
+				if (ascription->header && ascription->header == node)
+					return false;
+
+				return true;
+			}
+
+		private:
+			void increment()
+			{
+				if (node->right)
+				{
+					node = node->right;
+					while (node->left)
+						node = node->left;
+				}
+				else
+				{
+					rb_node *y = node->parent;
+					while (node == y->right)
+					{
+						node = y;
+						y = y->parent;
+					}
+
+					//Corner case：node原先指向root且root没有右孩子，所以经过上面的while后node在header，y在root，这时不能将node设为y
+					if (node->right != y)
+						node = y;
+				}
+			}
+			void decrement()
+			{
+				if (node->color == RED && node->parent->parent == node)//node有可能指向header，因为header和root都具有经过两个连续的parent后指向自己的性质，还要用颜色来限定确保是header
+					node = node->right;
+				else if (node->left)
+				{
+					node = node->left;
+					while (node->right)
+						node = node->right;
+				}
+				else
+				{
+					rb_node *y = node->parent;
+					while (node == y->left)
+					{
+						node = y;
+						y = y->parent;
+					}
+
+					node = y;//若node指向第一个节点，则--后指向header
+				}
+			}
 		};
 
 		iterator find(const KeyTypeDef& _key)

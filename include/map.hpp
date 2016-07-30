@@ -29,6 +29,48 @@ namespace sjtu
 
 		BalanceTreeTypeDef *bt;
 
+		map() :
+			bt(new BalanceTreeTypeDef()) 
+		{}
+
+		map(const map &other):
+			bt(new new BalanceTreeTypeDef(*other.bt))
+		{}
+
+		//assignment operator
+		map & operator=(const map &other)
+		{
+			map tmp(other);
+			swap(tmp);
+			return *this;
+		}
+
+		//Destructors
+		~map()
+		{
+			makeEmpty(root);
+			delete header;
+			delete cmp;
+		}
+
+
+		T& at(const Key &key)
+		{
+			iterator target = find(key);
+			if (target == end())
+				throw index_out_of_bound();
+
+			return target->second;
+		}
+		const T& at(const Key &key) const
+		{
+			const_iterator target = find(key);
+			if (target == cend())
+				throw index_out_of_bound();
+
+			return target->second;
+		}
+
 		iterator find(const KeyTypeDef& _key)
 		{
 			return bt->find(_key);
@@ -68,12 +110,34 @@ namespace sjtu
 				right(_r),
 				color(RED)
 			{}
+
+			static rb_node* _minimum(rb_node* x)
+			{
+				while (x->left)
+					x = x->left;
+				return x;
+			}
+
+			static rb_node* _maximum(rb_node* x)
+			{
+				while (x->right)
+					x = x->right;
+				return x;
+			}
 		};
 
 		size_t nodeCnt;
 		rb_node *header;
 		Compare cmp;
 		GetKeyFunc getKey;
+
+		void exchange(rb_tree &rhs)
+		{
+			std::swap(nodeCnt, rhs.nodeCnt);
+			std::swap(header, rhs.header);
+			std::swap(cmp, rhs.cmp);
+			std::swap(getKey, rhs.getKey);
+		}
 
 	public:
 		class const_iterator;
@@ -320,6 +384,35 @@ namespace sjtu
 				}
 			}
 		};
+
+		rb_tree():
+			nodeCnt(0),
+			header(new rb_node(ElemTypeDef())),
+			cmp(Compare()),
+			getKey(GetKeyFunc()) 
+		{}
+		
+		rb_tree(const rb_tree& rhs):
+			nodeCnt(rhs.nodeCnt),
+			header(copyTree(rhs.header)),
+			cmp(rhs.cmp),
+			getKey(rhs.getKey)
+		{}
+
+		rb_tree& operator=(rb_tree rhs)
+		{
+			exchange(rhs);
+			return *this;
+		}
+
+		~rb_tree() 
+		{
+			clear();
+			delete header;
+
+			nodeCnt = 0;
+			header = nullptr;
+		}
 
 		iterator find(const KeyTypeDef& _key)
 		{
@@ -572,10 +665,10 @@ namespace sjtu
 					z->parent->right = x;
 
 				if (lm == z)
-					lm = z->right ? _minimum(x) : z->parent;//由于z只有一个孩子或没有孩子，若z是leftmost，则没有左孩子，若此时z的右孩子为null，则z是叶子节点，leftmost即为z的parent，否则leftmost是x子树上的最左
+					lm = z->right ? rb_node::_minimum(x) : z->parent;//由于z只有一个孩子或没有孩子，若z是leftmost，则没有左孩子，若此时z的右孩子为null，则z是叶子节点，leftmost即为z的parent，否则leftmost是x子树上的最左
 
 				if (rm == z)
-					rm = z->left ? _maximum(x) : z->parent;//分析同上
+					rm = z->left ? rb_node::_maximum(x) : z->parent;//分析同上
 			}
 
 			//已经将待删节点y取下了，若是red可以直接return，否则要做调整后才能return

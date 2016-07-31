@@ -12,8 +12,11 @@ namespace sjtu
 	template<typename KeyTypeDef, typename ValTypeDef, class Compare = std::less<KeyTypeDef>>
 	class map
 	{
+	public:
 		typedef pair<const KeyTypeDef, ValTypeDef> value_type;
-		class _getKeyFunctor
+	
+	private:
+		class _getKey
 		{
 		public:
 			KeyTypeDef& operator() (const value_type& _elem) const
@@ -22,39 +25,42 @@ namespace sjtu
 			}
 		};
 
-		typedef rb_tree<KeyTypeDef, value_type, _getKeyFunctor, Compare> BalanceTreeTypeDef;
+	public:
+		typedef rb_tree<KeyTypeDef, value_type, _getKey, Compare> BalanceTreeTypeDef;
 
 		typedef typename BalanceTreeTypeDef::iterator iterator;
 		typedef typename BalanceTreeTypeDef::const_iterator const_iterator;
 
+	private:
 		BalanceTreeTypeDef *bt;
 
+		void exchange(map &rhs)
+		{
+			std::swap(bt, rhs.bt);
+		}
+
+	public:
 		map() :
 			bt(new BalanceTreeTypeDef()) 
 		{}
 
 		map(const map &other):
-			bt(new new BalanceTreeTypeDef(*other.bt))
+			bt(new BalanceTreeTypeDef(*other.bt))
 		{}
 
-		//assignment operator
-		map & operator=(const map &other)
+		map& operator=(map other)
 		{
-			map tmp(other);
-			swap(tmp);
+			exchange(tmp);
 			return *this;
 		}
 
-		//Destructors
 		~map()
 		{
-			makeEmpty(root);
-			delete header;
-			delete cmp;
+			delete bt;
+			bt = nullptr;
 		}
 
-
-		T& at(const Key &key)
+		ValTypeDef& at(const KeyTypeDef &key)
 		{
 			iterator target = find(key);
 			if (target == end())
@@ -62,13 +68,68 @@ namespace sjtu
 
 			return target->second;
 		}
-		const T& at(const Key &key) const
+		const ValTypeDef& at(const KeyTypeDef &key) const
 		{
 			const_iterator target = find(key);
 			if (target == cend())
 				throw index_out_of_bound();
 
 			return target->second;
+		}
+
+		ValTypeDef& operator[](const KeyTypeDef &key)
+		{
+			iterator target = find(key);
+			if (target == end())
+				return insert(value_type(key, ValTypeDef())).first->second;
+
+			return target->second;
+		}
+		const ValTypeDef& operator[](const KeyTypeDef &key) const
+		{
+			const_iterator = find(key);
+			if (target == cend())
+				throw index_out_of_bound();
+			
+			return target->second;
+		}
+
+		iterator begin() 
+		{
+			return bt->begin();
+		}
+		const_iterator cbegin() const 
+		{
+			return bt->cbegin();
+		}
+
+		iterator end()
+		{
+			return bt->end();
+		}
+		const_iterator cend() const
+		{ 
+			return bt->cend();
+		}
+
+		bool empty() const
+		{
+			return bt->empty();
+		}
+
+		size_t size() const
+		{ 
+			return bt->size();
+		}
+
+		void clear()
+		{
+			bt->clear();
+		}
+
+		size_t count(const KeyTypeDef &key) const
+		{
+			return find(key) != cend() ? 1 : 0; 
 		}
 
 		iterator find(const KeyTypeDef& _key)
@@ -89,7 +150,6 @@ namespace sjtu
 		{
 			bt->erase(pos);
 		}
-
 	};
 
 	template<typename KeyTypeDef, typename ElemTypeDef, class GetKeyFunc, class Compare>
@@ -97,19 +157,48 @@ namespace sjtu
 	{
 	private:
 		typedef enum { RED = 0, BLACK = 1 } ColorTypeDef;
-		struct rb_node
+		class rb_node
 		{
+		private:
+			void exchange(rb_node &rhs)
+			{
+				std::swap(elem, rhs.elem);
+				std::swap(parent, rhs.parent);
+				std::swap(left, rhs.left);
+				std::swap(right, rhs.right);
+				std::swap(color, rhs.color);
+			}
+
+		public:
 			ElemTypeDef elem;
 			rb_node *parent, *left, *right;
 			ColorTypeDef color;
 
-			rb_node(const ElemTypeDef& _e, rb_node *_p = nullptr, rb_node *_l = nullptr, rb_node *_r = nullptr) :
+			//构造函数，默认颜色为red，指针为nullptr
+			rb_node(const ElemTypeDef& _e = ElemTypeDef(), rb_node *_p = nullptr, rb_node *_l = nullptr, rb_node *_r = nullptr, ColorTypeDef _c = RED) :
 				elem(_e),
 				parent(_p),
 				left(_l),
 				right(_r),
-				color(RED)
+				color(_c)
 			{}
+
+			//拷贝构造函数，只复制对方的elem和color，指针设为nullptr
+			rb_node(const rb_node &rhs) :
+				elem(rhs.elem), 
+				parent(nullptr), 
+				left(nullptr), 
+				right(nullptr), 
+				color(rhs.color)
+			{}
+
+			rb_node& operator=(rb_node rhs)
+			{
+				exchange(rhs);
+				return *this;
+			}
+
+			~rb_node() {}
 
 			static rb_node* _minimum(rb_node* x)
 			{
@@ -117,7 +206,6 @@ namespace sjtu
 					x = x->left;
 				return x;
 			}
-
 			static rb_node* _maximum(rb_node* x)
 			{
 				while (x->right)
@@ -387,17 +475,28 @@ namespace sjtu
 
 		rb_tree():
 			nodeCnt(0),
-			header(new rb_node(ElemTypeDef())),
+			header(new rb_node()),
 			cmp(Compare()),
 			getKey(GetKeyFunc()) 
-		{}
+		{
+			header->left = header;
+			header->right = header;
+		}
 		
 		rb_tree(const rb_tree& rhs):
 			nodeCnt(rhs.nodeCnt),
-			header(copyTree(rhs.header)),
+			header(new rb_node(*rhs.header)),
 			cmp(rhs.cmp),
 			getKey(rhs.getKey)
-		{}
+		{
+			header->parent = copyTree(rhs.header->parent);
+			if (nodeCnt)
+			{
+				header->parent->parent = header;
+				header->left = rb_node::_minimum(header->parent);
+				header->right = rb_node::_maximum(header->parent);
+			}
+		}
 
 		rb_tree& operator=(rb_tree rhs)
 		{
@@ -408,10 +507,47 @@ namespace sjtu
 		~rb_tree() 
 		{
 			clear();
-			delete header;
 
-			nodeCnt = 0;
+			delete header;
 			header = nullptr;
+		}
+
+		iterator begin()
+		{
+			return iterator(header->left, this);
+		}
+		const_iterator cbegin() const
+		{
+			return const_iterator(header->left, this);
+		}
+
+		iterator end()
+		{
+			return iterator(header, this);
+		}
+		const_iterator cend() const
+		{
+			return const_iterator(header, this);
+		}
+
+		bool empty() const
+		{
+			return nodeCnt == 0;
+		}
+
+		size_t size() const
+		{
+			return nodeCnt;
+		}
+
+		void clear()
+		{
+			makeEmpty(header->parent);
+			nodeCnt = 0;
+
+			header->parent = nullptr;
+			header->left = header;
+			header->right = header;
 		}
 
 		iterator find(const KeyTypeDef& _key)
@@ -472,6 +608,35 @@ namespace sjtu
 		}
 
 	private:
+		rb_node* copyTree(rb_node* src)
+		{
+			if (!src)
+				return nullptr;
+
+			rb_node* root = new rb_node(*src);
+
+			root->left = copyTree(src->left);
+			root->left->parent = root;
+			
+			root->right = copyTree(src->right);
+			root->right->parent = root;
+
+			return root;
+		}
+
+		void makeEmpty(rb_node* x)
+		{
+			//不论是递归方法还是非递归方法，stack的使用都是必不可少的，既然如此，在空间效率上两者并无太大区别
+			//虽然morris遍历只需要O(1)的空间复杂度，但是时间上却double了，因此不采用morris遍历
+			while (x)
+			{
+				makeEmpty(x->right);
+				auto y = x->left;
+				delete x;
+				x = y;
+			}
+		}
+
 		iterator _insert(rb_node *x, rb_node *y, const ElemTypeDef& v)
 		{
 			rb_node *z = new rb_node(v, y);

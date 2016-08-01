@@ -9,149 +9,6 @@
 
 namespace sjtu 
 {
-	template<typename KeyTypeDef, typename ValTypeDef, class Compare = std::less<KeyTypeDef>>
-	class map
-	{
-	public:
-		typedef pair<const KeyTypeDef, ValTypeDef> value_type;
-	
-	private:
-		class _getKey
-		{
-		public:
-			KeyTypeDef& operator() (const value_type& _elem) const
-			{
-				return _elem.first; 
-			}
-		};
-
-	public:
-		typedef rb_tree<KeyTypeDef, value_type, _getKey, Compare> BalanceTreeTypeDef;
-
-		typedef typename BalanceTreeTypeDef::iterator iterator;
-		typedef typename BalanceTreeTypeDef::const_iterator const_iterator;
-
-	private:
-		BalanceTreeTypeDef *bt;
-
-		void exchange(map &rhs)
-		{
-			std::swap(bt, rhs.bt);
-		}
-
-	public:
-		map() :
-			bt(new BalanceTreeTypeDef()) 
-		{}
-
-		map(const map &other):
-			bt(new BalanceTreeTypeDef(*other.bt))
-		{}
-
-		map& operator=(map other)
-		{
-			exchange(tmp);
-			return *this;
-		}
-
-		~map()
-		{
-			delete bt;
-			bt = nullptr;
-		}
-
-		ValTypeDef& at(const KeyTypeDef &key)
-		{
-			iterator target = find(key);
-			if (target == end())
-				throw index_out_of_bound();
-
-			return target->second;
-		}
-		const ValTypeDef& at(const KeyTypeDef &key) const
-		{
-			const_iterator target = find(key);
-			if (target == cend())
-				throw index_out_of_bound();
-
-			return target->second;
-		}
-
-		ValTypeDef& operator[](const KeyTypeDef &key)
-		{
-			iterator target = find(key);
-			if (target == end())
-				return insert(value_type(key, ValTypeDef())).first->second;
-
-			return target->second;
-		}
-		const ValTypeDef& operator[](const KeyTypeDef &key) const
-		{
-			const_iterator = find(key);
-			if (target == cend())
-				throw index_out_of_bound();
-			
-			return target->second;
-		}
-
-		iterator begin() 
-		{
-			return bt->begin();
-		}
-		const_iterator cbegin() const 
-		{
-			return bt->cbegin();
-		}
-
-		iterator end()
-		{
-			return bt->end();
-		}
-		const_iterator cend() const
-		{ 
-			return bt->cend();
-		}
-
-		bool empty() const
-		{
-			return bt->empty();
-		}
-
-		size_t size() const
-		{ 
-			return bt->size();
-		}
-
-		void clear()
-		{
-			bt->clear();
-		}
-
-		size_t count(const KeyTypeDef &key) const
-		{
-			return find(key) != cend() ? 1 : 0; 
-		}
-
-		iterator find(const KeyTypeDef& _key)
-		{
-			return bt->find(_key);
-		}
-		const_iterator find(const KeyTypeDef& _key) const
-		{
-			return bt->find(_key);
-		}
-
-		pair<iterator, bool> insert(const value_type &value) 
-		{
-			return bt->insert(value);
-		}
-
-		void erase(iterator pos)
-		{
-			bt->erase(pos);
-		}
-	};
-
 	template<typename KeyTypeDef, typename ElemTypeDef, class GetKeyFunc, class Compare>
 	class rb_tree
 	{
@@ -185,10 +42,10 @@ namespace sjtu
 
 			//拷贝构造函数，只复制对方的elem和color，指针设为nullptr
 			rb_node(const rb_node &rhs) :
-				elem(rhs.elem), 
-				parent(nullptr), 
-				left(nullptr), 
-				right(nullptr), 
+				elem(rhs.elem),
+				parent(nullptr),
+				left(nullptr),
+				right(nullptr),
 				color(rhs.color)
 			{}
 
@@ -231,6 +88,9 @@ namespace sjtu
 		class const_iterator;
 		class iterator
 		{
+			friend class const_iterator;
+			friend class rb_tree<KeyTypeDef, ElemTypeDef, GetKeyFunc, Compare>;
+
 		private:
 			rb_node* node;
 			rb_tree* ascription;
@@ -238,11 +98,12 @@ namespace sjtu
 		public:
 			iterator(rb_node* _nPtr = nullptr, rb_tree* _tPtr = nullptr) :node(_nPtr), ascription(_tPtr) {}
 			iterator(const iterator& rhs) :node(rhs.node), ascription(rhs.ascription) {}
+			~iterator() {}
 
 			ElemTypeDef& operator*() const { return node->elem; }
 			ElemTypeDef* operator->() const noexcept { return &(operator*()); }
 
-			iterator operator++(int) 
+			iterator operator++(int)
 			{
 				iterator tmp = *this;
 				increment();
@@ -254,39 +115,39 @@ namespace sjtu
 				return *this;
 			}
 
-			iterator operator--(int) 
+			iterator operator--(int)
 			{
 				iterator tmp = *this;
 				decrement();
 				return *this;
 			}
-			iterator& operator--() 
+			iterator& operator--()
 			{
 				decrement();
 				return *this;
 			}
 
-			bool operator==(const iterator &rhs) const 
+			bool operator==(const iterator &rhs) const
 			{
 				return ascription == rhs.ascription && node == rhs.node;
 			}
-			bool operator==(const const_iterator &rhs) const 
+			bool operator==(const const_iterator &rhs) const
 			{
 				return ascription == rhs.ascription && node == rhs.node;
 			}
 
-			bool operator!=(const iterator &rhs) const 
+			bool operator!=(const iterator &rhs) const
 			{
 				return !operator==(rhs);
 			}
-			bool operator!=(const const_iterator &rhs) const 
+			bool operator!=(const const_iterator &rhs) const
 			{
 				return !operator==(rhs);
 			}
 
 			bool isAscriptedTo(void* _id) const
 			{
-				return id && id == ascription;
+				return _id && _id == ascription;
 			}
 			bool isValid() const
 			{
@@ -299,7 +160,7 @@ namespace sjtu
 
 				return true;
 			}
-			
+
 		private:
 			//若iterator指向二叉序第一个元素，increment后是正常的二叉序第二个元素
 			//若iterator指向二叉序最后一个元素，increment后是header
@@ -356,6 +217,7 @@ namespace sjtu
 
 		class const_iterator
 		{
+			friend class rb_tree<KeyTypeDef, ElemTypeDef, GetKeyFunc, Compare>;
 		private:
 			rb_node* node;
 			rb_tree* ascription;
@@ -364,6 +226,7 @@ namespace sjtu
 			const_iterator(rb_node* _nPtr = nullptr, rb_tree* _tPtr = nullptr) :node(_nPtr), ascription(_tPtr) {}
 			const_iterator(const const_iterator& rhs) :node(rhs.node), ascription(rhs.ascription) {}
 			const_iterator(const iterator& rhs) :node(rhs.node), ascription(rhs.ascription) {}
+			~const_iterator() {}
 
 			const ElemTypeDef& operator*() const { return node->elem; }
 			const ElemTypeDef* operator->() const noexcept { return &(operator*()); }//返回得到的指针可以被修改，但是指针指向的内容不能被修改
@@ -412,7 +275,7 @@ namespace sjtu
 
 			bool isAscriptedTo(void* _id) const
 			{
-				return id && id == ascription;
+				return _id && _id == ascription;
 			}
 			bool isValid() const
 			{
@@ -473,17 +336,17 @@ namespace sjtu
 			}
 		};
 
-		rb_tree():
+		rb_tree() :
 			nodeCnt(0),
 			header(new rb_node()),
 			cmp(Compare()),
-			getKey(GetKeyFunc()) 
+			getKey(GetKeyFunc())
 		{
 			header->left = header;
 			header->right = header;
 		}
-		
-		rb_tree(const rb_tree& rhs):
+
+		rb_tree(const rb_tree& rhs) :
 			nodeCnt(rhs.nodeCnt),
 			header(new rb_node(*rhs.header)),
 			cmp(rhs.cmp),
@@ -504,7 +367,7 @@ namespace sjtu
 			return *this;
 		}
 
-		~rb_tree() 
+		~rb_tree()
 		{
 			clear();
 
@@ -516,7 +379,7 @@ namespace sjtu
 		{
 			return iterator(header->left, this);
 		}
-		const_iterator cbegin() const
+		const_iterator cbegin()
 		{
 			return const_iterator(header->left, this);
 		}
@@ -525,7 +388,7 @@ namespace sjtu
 		{
 			return iterator(header, this);
 		}
-		const_iterator cend() const
+		const_iterator cend()
 		{
 			return const_iterator(header, this);
 		}
@@ -593,7 +456,7 @@ namespace sjtu
 				else
 					--j;
 			}
-			if (cmp(getKey(j->elem), getKey(_val)))
+			if (cmp(getKey(*j), getKey(_val)))
 				return pair<iterator, bool>(_insert(x, y, _val), true);
 
 			return pair<iterator, bool>(j, false);
@@ -616,10 +479,12 @@ namespace sjtu
 			rb_node* root = new rb_node(*src);
 
 			root->left = copyTree(src->left);
-			root->left->parent = root;
-			
+			if (root->left)
+				root->left->parent = root;
+
 			root->right = copyTree(src->right);
-			root->right->parent = root;
+			if (root->right)
+				root->right->parent = root;
 
 			return root;
 		}
@@ -741,7 +606,7 @@ namespace sjtu
 			rb_node *y = x->left;
 			x->left = y->right;
 			if (y->right)
-				y->right->left = x;
+				y->right->parent = x;
 			y->parent = x->parent;
 
 			if (x == r)
@@ -756,7 +621,7 @@ namespace sjtu
 
 		void _erase(iterator pos)
 		{
-			rb_node *y = _erase_rebalance(pos->node, header->parent, header->left, header->right);
+			rb_node *y = _erase_rebalance(pos.node, header->parent, header->left, header->right);
 			delete y;
 			--nodeCnt;
 		}
@@ -843,7 +708,7 @@ namespace sjtu
 				//到这步只可能是待删点是black leaf
 				//若待删点是只有一个孩子，则孩子节点x必为red，直接pass 
 				//若待删点是red leaf， 在上面的if就被pass了
-				while (x != r && (!x || x->color == BLACK)//x是待调整节点
+				while (x != r && (!x || x->color == BLACK))//x是待调整节点
 				{
 					if (x == xp->left)
 					{
@@ -931,6 +796,149 @@ namespace sjtu
 			}
 
 			return y;
+		}
+	};
+
+	template<typename KeyTypeDef, typename ValTypeDef, class Compare = std::less<KeyTypeDef>>
+	class map
+	{
+	public:
+		typedef pair<const KeyTypeDef, ValTypeDef> value_type;
+	
+	private:
+		class _getKey
+		{
+		public:
+			const KeyTypeDef& operator() (const value_type& _elem) const
+			{
+				return _elem.first; 
+			}
+		};
+
+	public:
+		typedef rb_tree<KeyTypeDef, value_type, _getKey, Compare> BalanceTreeTypeDef;
+
+		typedef typename BalanceTreeTypeDef::iterator iterator;
+		typedef typename BalanceTreeTypeDef::const_iterator const_iterator;
+
+	private:
+		BalanceTreeTypeDef *bt;
+
+		void exchange(map &rhs)
+		{
+			std::swap(bt, rhs.bt);
+		}
+
+	public:
+		map() :
+			bt(new BalanceTreeTypeDef()) 
+		{}
+
+		map(const map &other):
+			bt(new BalanceTreeTypeDef(*other.bt))
+		{}
+
+		map& operator=(map tmp)
+		{
+			exchange(tmp);
+			return *this;
+		}
+
+		~map()
+		{
+			delete bt;
+			bt = nullptr;
+		}
+
+		ValTypeDef& at(const KeyTypeDef &key)
+		{
+			iterator target = find(key);
+			if (target == end())
+				throw index_out_of_bound();
+
+			return target->second;
+		}
+		const ValTypeDef& at(const KeyTypeDef &key) const
+		{
+			const_iterator target = find(key);
+			if (target == cend())
+				throw index_out_of_bound();
+
+			return target->second;
+		}
+
+		ValTypeDef& operator[](const KeyTypeDef &key)
+		{
+			iterator target = find(key);
+			if (target == end())
+				return insert(value_type(key, ValTypeDef())).first->second;
+
+			return target->second;
+		}
+		const ValTypeDef& operator[](const KeyTypeDef &key) const
+		{
+			const_iterator target = find(key);
+			if (target == cend())
+				throw index_out_of_bound();
+			
+			return target->second;
+		}
+
+		iterator begin() 
+		{
+			return bt->begin();
+		}
+		const_iterator cbegin() const 
+		{
+			return bt->cbegin();
+		}
+
+		iterator end()
+		{
+			return bt->end();
+		}
+		const_iterator cend() const
+		{ 
+			return bt->cend();
+		}
+
+		bool empty() const
+		{
+			return bt->empty();
+		}
+
+		size_t size() const
+		{ 
+			return bt->size();
+		}
+
+		void clear()
+		{
+			bt->clear();
+		}
+
+		size_t count(const KeyTypeDef &key) const
+		{
+			return find(key) != cend() ? 1 : 0; 
+		}
+
+		iterator find(const KeyTypeDef& _key)
+		{
+			return bt->find(_key);
+		}
+		const_iterator find(const KeyTypeDef& _key) const
+		{
+			return bt->find(_key);
+		}
+
+		pair<iterator, bool> insert(const value_type &_val) 
+		{
+			return bt->insert(_val);
+		}
+
+		void erase(iterator pos)
+		{
+			bt->erase(pos);
 		}
 	};
 }

@@ -119,7 +119,7 @@ namespace sjtu
 			{
 				iterator tmp = *this;
 				decrement();
-				return *this;
+				return tmp;
 			}
 			iterator& operator--()
 			{
@@ -162,11 +162,13 @@ namespace sjtu
 			}
 
 		private:
-			//若iterator指向二叉序第一个元素，increment后是正常的二叉序第二个元素
 			//若iterator指向二叉序最后一个元素，increment后是header
-			//若iterator指向header，incerment后是最后一个元素的最左node，这个行为是未定义的
+			//若iterator指向header，incerment后是最后一个元素的最左node，这个行为是未定义的,但是在rb_tree为空时，会造成死循环,throw
 			void increment()
 			{
+				if (node == ascription->header)
+					throw invalid_iterator();
+
 				if (node->right)
 				{
 					node = node->right;
@@ -188,11 +190,13 @@ namespace sjtu
 				}
 			}
 
-			//若iterator指向二叉序第一个元素，decrement后是header
-			//若iterator指向二叉序最后一个元素，decrement后是正常的前一个node
-			//若iterator指向header，decrement后是第一个node的最右
+			//若iterator指向二叉序第一个元素，decrement未定义，直接throw
+			//若iterator指向header，decrement后是最后一个rb_node
 			void decrement()
 			{
+				if(node==ascription->header->left)
+					throw invalid_iterator();
+
 				if (node->color == RED && node->parent->parent == node)//node有可能指向header，因为header和root都具有经过两个连续的parent后指向自己的性质，还要用颜色来限定确保是header
 					node = node->right;
 				else if (node->left)
@@ -209,7 +213,6 @@ namespace sjtu
 						node = y;
 						y = y->parent;
 					}
-
 					node = y;//若node指向第一个节点，则--后指向header
 				}
 			}
@@ -292,6 +295,9 @@ namespace sjtu
 		private:
 			void increment()
 			{
+				if (node == ascription->header)
+					throw invalid_iterator();
+
 				if (node->right)
 				{
 					node = node->right;
@@ -314,6 +320,9 @@ namespace sjtu
 			}
 			void decrement()
 			{
+				if (node == ascription->header->left)
+					throw invalid_iterator();
+
 				if (node->color == RED && node->parent->parent == node)//node有可能指向header，因为header和root都具有经过两个连续的parent后指向自己的性质，还要用颜色来限定确保是header
 					node = node->right;
 				else if (node->left)
@@ -339,8 +348,8 @@ namespace sjtu
 		rb_tree() :
 			nodeCnt(0),
 			header(new rb_node()),
-			cmp(Compare()),
-			getKey(GetKeyFunc())
+			cmp(),
+			getKey()
 		{
 			header->left = header;
 			header->right = header;
@@ -512,9 +521,9 @@ namespace sjtu
 				if (y == header)
 				{
 					header->parent = z;
-					header->left = z;
+					header->right = z;
 				}
-				else if (y = header->left)
+				else if (y == header->left)
 					header->left = z;
 			}
 			else

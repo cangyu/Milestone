@@ -5,13 +5,15 @@
 
 #include <cstddef>
 
-namespace sjtu { 
-
+namespace sjtu
+{ 
 template<class T>
-class deque {
+class deque 
+{
 public:
 	class const_iterator;
-	class iterator {
+	class iterator 
+	{
 	private:
 		/**
 		 * TODO add data members

@@ -229,7 +229,7 @@ public:
 		local_iterator &operator++() 
 		{
 			if (_cur)
-				cur = cur->next;
+				_cur = _cur->next;
 
 			return *this;
 		}
@@ -275,12 +275,12 @@ public:
 		const_local_iterator(node *_p = nullptr, bucket *_a = nullptr) :_cur(_p), _ascription(_a) {}
 		const_local_iterator(const const_local_iterator& rhs) :_cur(rhs._cur), _ascription(rhs._ascription) {}
 		const_local_iterator(const local_iterator& rhs) :_cur(rhs._cur), _ascription(rhs._ascription) {}
-		const_local_iterator(const iterator &other) :_cur(rhs._cur), _ascription(nullptr) 
+		const_local_iterator(const iterator &rhs) :_cur(rhs._cur), _ascription(nullptr) 
 		{
 			if (_cur)
 			{
-				size_t n = other._ascription->calcHashIndex(_cur->elem);
-				_ascription = &other._ascription->buckets[n];
+				size_t n = rhs._ascription->calcHashIndex(_cur->elem);
+				_ascription = &rhs._ascription->buckets[n];
 			}
 		}
 		const_local_iterator &operator=(const_local_iterator rhs)
@@ -294,7 +294,7 @@ public:
 		const_local_iterator& operator++()
 		{
 			if (_cur)
-				cur = cur->next;
+				_cur = _cur->next;
 
 			return *this;
 		}

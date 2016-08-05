@@ -10,9 +10,22 @@
 
 namespace sjtu
 {
+//hash表的大小取质数
+static const int _num_prime = 28;
+static const unsigned long _prime_list[_num_prime] = {
+	53,         97,           193,         389,       769,
+	1543,       3079,         6151,        12289,     24593,
+	49157,      98317,        196613,      393241,    786433,
+	1572869,    3145739,      6291469,     12582917,  25165843,
+	50331653,   100663319,    201326611,   402653189, 805306457,
+	1610612741, 3221225473ul, 4294967291ul
+};
+
 template<class Key, class T, class Hash = std::hash<Key>, class KeyEqual = std::equal_to<Key>> 
 class unordered_map 
 {
+	friend class iterator;
+	friend class const_iterator;
 public:
 	typedef pair<const Key, T> value_type;
 
@@ -32,17 +45,6 @@ private:
 		node* start;
 
 		bucket() :cnt(0), start(nullptr) {}
-	};
-
-	//hash表的大小取质数
-	static const int _num_prime = 28;
-	static const unsigned long _prime_list[_num_prime] ={
-		53,         97,           193,         389,       769,
-		1543,       3079,         6151,        12289,     24593,
-		49157,      98317,        196613,      393241,    786433,
-		1572869,    3145739,      6291469,     12582917,  25165843,
-		50331653,   100663319,    201326611,   402653189, 805306457,
-		1610612741, 3221225473ul, 4294967291ul
 	};
 
 	static unsigned long next_size(size_t n)
@@ -108,9 +110,9 @@ public:
 			_cur = _cur->next;
 			if (!_cur)
 			{
-				size_t oriIndex = calcHashIndex(old->elem.first);
-				while (!_cur && ++oriIndex < buckets.size())
-					_cur = buckets[oriIndex].start;
+				size_t oriIndex = _ascription->calcHashIndex(old->elem.first);
+				while (!_cur && ++oriIndex < _ascription->buckets.size())
+					_cur = _ascription->buckets[oriIndex].start;
 			}
 			return *this;
 		}
@@ -168,9 +170,9 @@ public:
 			_cur = _cur->next;
 			if (!_cur)
 			{
-				size_t oriIndex = calcHashIndex(old->elem.first);
-				while (!_cur && ++oriIndex < buckets.size())
-					_cur = buckets[oriIndex].start;
+				size_t oriIndex = _ascription->calcHashIndex(old->elem.first);
+				while (!_cur && ++oriIndex < _ascription->buckets.size())
+					_cur = _ascription->buckets[oriIndex].start;
 			}
 			return *this;
 		}
@@ -202,6 +204,7 @@ public:
 	{
 		friend class iterator;
 		friend class const_iterator;
+
 	private:
 		node *_cur;
 		bucket *_ascription;
@@ -223,7 +226,7 @@ public:
 		~local_iterator() {}
 
 		//march forward
-		local_iterator& operator++() 
+		local_iterator &operator++() 
 		{
 			if (_cur)
 				cur = cur->next;
@@ -257,6 +260,7 @@ public:
 	{
 		friend class iterator;
 		friend class const_iterator;
+
 	private:
 		node *_cur;
 		bucket *_ascription;
@@ -275,8 +279,8 @@ public:
 		{
 			if (_cur)
 			{
-				size_t n = calcHashIndex(_cur->elem);
-				_ascription = &buckets[n];
+				size_t n = other._ascription->calcHashIndex(_cur->elem);
+				_ascription = &other._ascription->buckets[n];
 			}
 		}
 		const_local_iterator &operator=(const_local_iterator rhs)
@@ -369,8 +373,8 @@ public:
 				delete p;
 				p = t;
 			}
-			buckets[n].start = nullptr;
-			buckets[n].cnt = 0;
+			buckets[i].start = nullptr;
+			buckets[i].cnt = 0;
 		}
 		nodeCnt = 0;
 	}
@@ -505,21 +509,19 @@ private:
 		//要求buckets已被初始化！
 		for (size_t i = 0; i < rhs.buckets.size(); i++)
 		{
-			buckets.insert(buckets.end(), bucket());
-
 			node *p = rhs.buckets[i].start;
 			while (p)
 			{
-				bucket[i].start = new node(p->elem, bucket[i].start);
+				buckets[i].start = new node(p->elem, buckets[i].start);
 				p = p->next;
 			}
 		}
 	}
 
 	//计算相应元素在hash表中的index
-	size_t calcHashIndex(const Key& _key) const { return _hasher(_key) % nodeCnt; }
+	size_t calcHashIndex(const Key& _key) const { return _hasher(_key) % buckets.size(); }
 	size_t calcHashIndex(const Key& _key, size_t n) const { return _hasher(_key) % n; }
-	size_t calcHashIndex(const value_type& _val) const { return _hasher(_val.first) % nodeCnt; }
+	size_t calcHashIndex(const value_type& _val) const { return _hasher(_val.first) % buckets.size(); }
 	size_t calcHashIndex(const value_type& _val, size_t n) const { return _hasher(_val.first) % n; }
 
 	//重新配置hash表的长度
@@ -528,26 +530,32 @@ private:
 		const size_t _old_n = buckets.size();
 		if (_new_cnt > _old_n)
 		{
-			const n = next_size(_new_cnt);
-			vector<bucket> tmp(n);
-
-			for (size_t i = 0; i < _old_n; i++)
+			const size_t n = next_size(_new_cnt);
+			if (n > _old_n)
 			{
-				node *p = buckets[i].start;
-				while (p)
+				vector<bucket> tmp(n, bucket());
+				for (size_t i = 0; i < _old_n; i++)
 				{
-					//计算在新的hash list中的下标
-					size_t _new_index = calcHashIndex(p->elem.first, n);
-					
-					//按插邻接表的方式从原来的list中取出node，再插到新的list的第一个
-					buckets[i].start = p->next;
-					p->next = tmp[_new_index].start;
-					tmp[_new_index].start = p;
-					++tmp[_new_index].cnt;
-				}
-			}
+					node *p = buckets[i].start;
+					node *t = nullptr;
+					while (p)
+					{
+						t = p->next;
+						
+						//计算在新的hash list中的下标
+						size_t _new_index = calcHashIndex(p->elem.first, n);
 
-			std::swap(buckets, tmp);
+						//按插邻接表的方式从原来的list中取出node，再插到新的list的第一个
+						buckets[i].start = p->next;
+						p->next = tmp[_new_index].start;
+						tmp[_new_index].start = p;
+						++tmp[_new_index].cnt;
+
+						p = t;
+					}
+				}
+				std::swap(buckets, tmp);
+			}
 		}
 	}
 
@@ -563,7 +571,7 @@ private:
 			p = p->next;
 		}
 		node *tmp = new node(_elem, buckets[n].start);
-		buckets[n] = tmp;
+		buckets[n].start = tmp;
 		++nodeCnt;
 		return pair<iterator, bool>(iterator(tmp, this), true);
 	}

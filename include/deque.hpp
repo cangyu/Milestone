@@ -4,21 +4,22 @@
 #include "exceptions.hpp"
 
 #include <cstddef>
+#include <cstring>
 
 namespace sjtu
-{ 
+{
 template<class T>
-class deque 
+class deque
 {
 private:
 	class node
 	{
 	public:
 		node *prev, *next;
-		T *start, *end;
-		T *left, *right;
+		T *start, *left;
+        size_t totalLen, validLen;
 
-		node() :start(nullptr), end(nullptr), len(0) 
+		node() :start(nullptr), end(nullptr), len(0)
 		{
 			prev = next = this;
 		}
@@ -28,8 +29,8 @@ private:
 			prev = next = this;
 			end = start + _len;
 		}
-		
-		~node() 
+
+		~node()
 		{
 			delete[] start;
 			start = end = nullptr;
@@ -62,7 +63,7 @@ private:
 			std::swap(len, rhs.len);
 		}
 	};
-	
+
 	size_t elemCnt;
 	node *head;
 
@@ -74,7 +75,7 @@ private:
 
 public:
 	class const_iterator;
-	class iterator 
+	class iterator
 	{
 		friend class const_iterator;
 	private:
@@ -99,12 +100,12 @@ public:
 			return *this;
 		}
 
-		iterator operator+(const int &n) const 
+		iterator operator+(const int &n) const
 		{
 			iterator tmp = *this;
 			return tmp += n;
 		}
-		iterator operator-(const int &n) const 
+		iterator operator-(const int &n) const
 		{
 			iterator tmp = *this;
 			return tmp -= n;
@@ -114,7 +115,7 @@ public:
 		int operator-(const iterator &rhs) const {
 			//TODO
 		}
-		iterator operator+=(const int &n) 
+		iterator operator+=(const int &n)
 		{
 			//TODO
 		}
@@ -123,23 +124,23 @@ public:
 			return *this += -n;
 		}
 
-		iterator operator++(int) 
+		iterator operator++(int)
 		{
 			iterator tmp = *this;
 			++*this;
 			return tmp;
 		}
-		iterator& operator++() 
+		iterator& operator++()
 		{
 
 		}
-		iterator operator--(int) 
+		iterator operator--(int)
 		{
 			iterator tmp = *this;
 			--*this;
 			return tmp;
 		}
-		iterator& operator--() 
+		iterator& operator--()
 		{
 
 		}
@@ -174,25 +175,25 @@ public:
 
 	deque():elemCnt(0),head(new node()) {}
 
-	deque(const deque &other) 
+	deque(const deque &other)
 	{
 
 	}
 
-	~deque() 
+	~deque()
 	{
 		clear();
 		delete head;
 	}
 
-	deque &operator=(deque other) 
+	deque &operator=(deque other)
 	{
 		exchange(other);
 		return *this;
 	}
 
 	//access specified element with bounds checking
-	T& at(const size_t &pos) 
+	T& at(const size_t &pos)
 	{
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
@@ -206,7 +207,7 @@ public:
 
 		return *(t + pos);
 	}
-	const T &at(const size_t &pos) const 
+	const T &at(const size_t &pos) const
 	{
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
@@ -220,88 +221,132 @@ public:
 
 		return *(t + pos);
 	}
-	T& operator[](const size_t &pos) 
+	T& operator[](const size_t &pos)
 	{
 		return at(pos);
 	}
-	const T& operator[](const size_t &pos) const 
+	const T& operator[](const size_t &pos) const
 	{
 		return at(pos);
 	}
 
 	//access the first element
-	const T & front() const 
+	const T & front() const
 	{
 		if (elemCnt == 0)
 			throw container_is_empty();
 
-		return *(head->next->start);
+		return *(head->next->left);
 	}
 
 	//access the last element
-	const T & back() const 
+	const T & back() const
 	{
 		if (elemCnt == 0)
 			throw container_is_empty();
 
-		return *(head->prev->start);
+		return *(head->prev->left+head->prev->validLen-1);
 	}
 
-	//returns an iterator to the beginning.
+	//iterator to the beginning
 	iterator begin() { return iterator(head->next->start, head->next, head); }
 	const_iterator cbegin() const { return begin(); }
 
-	//returns an iterator to the end.
+	//iterator to the end
 	iterator end() { return iterator(nullptr, head, head); }
 	const_iterator cend() const { return end(); }
 
+    //true if the container is empty
 	bool empty() const { return elemCnt == 0; }
 
+    //number of elements in the container
 	size_t size() const { return elemCnt; }
 
-	void clear() {}
-	/**
-	 * inserts elements at the specified locat on in the container.
-	 * inserts value before pos
-	 * returns an iterator pointing to the inserted value
-	 *     throw if the iterator is invalid or it point to a wrong place.
-	 */
-	iterator insert(iterator pos, const T &value) {}
-	/**
-	 * removes specified element at pos.
-	 * removes the element at pos.
-	 * returns an iterator pointing to the following element, if pos pointing to the last element, end() will be returned.
-	 * throw if the container is empty, the iterator is invalid or it points to a wrong place.
-	 */
-	iterator erase(iterator pos) 
+    //release all the nodes, as well as the contents inside
+	void clear() 
+    {
+        node *p=head->next;
+        node *t=nullptr;
+        while(p!=head)
+        {
+            t=p->next;
+            delete p;
+            p=t;
+        }
+    }
+
+	//inserts value before pos
+	iterator insert(iterator pos, const T &value) 
+    {
+        if (!pos.isValid(this))
+			throw invalid_iterator();
+        
+        //当前块内有空余
+        if(pos.ascription.validLen<pos.ascription.totalLen)
+        {
+            if(pos.ascription.start<pos.ascription.left)//左边有空余
+            {
+                size_t numToMove=pos.cur-pos.ascription->left;
+                std::memmove(pos.ascription->left-1,pos.ascription->left,numToMove*sizeof(T));
+                *pos.cur=value;
+            }
+            else//右边有空余
+            {
+                size_t numToMove=pos.ascription->validLen-(pos.cur-pos.ascription->left);
+                std::memmove(pos.cur+1,pos.cur,numToMove*sizeof(T));
+                *pos.cur=value;
+            }
+            ++validLen;
+            return pos;
+        }
+        else//当前块已满
+        {
+            size_t index=iterator::getIndex(pos);
+            
+            size_t numToMove=pos.ascription->validLen-(pos.cur-pos.ascription->left);
+            node *tmp=new node(numToMove);
+            for(int i=0;i<numToMove;i++)
+                new (tmp->left+i) T(*(pos.cur+i));
+            tmp->validLen=numToMove;
+            
+            *pos.cur=value;
+            pos.ascription->validLen-=(numToMove-1);
+            
+            insert_after(pos.ascription,tmp);
+            
+            _maintain(pos.ascription->prev);
+            return iterator::getIterator(index);
+        }
+    }
+	
+	//removes specified element at pos.
+	iterator erase(iterator pos)
 	{
 		if (empty() || !pos.isValid(this))
 			throw invalid_iterator();
-
-		if (pos.cur == head->prev->right + 1)
-		{
-			pop_back();
-			return end();
-		}
-
-		size_t index = iterator::getIndex(pos);
-
-		--elemCnt;
-		if (pos.cur == pos.ascription->left)
-			++left;
-		else if (pos.cur == pos.ascription->right - 1)
-			--right;
-		else
-		{
-			size_t nl = pos.ascription->right - pos.cur;
-			node *tmp = new node(nl);
-			for (int i = 0; i < nl; i++)
-				new (tmp->left+i) T(pos.ascription)
-		}
-
+        
+        size_t index=iterator::getIndex(pos);
+        --elemCnt;
+        
+        if(pos.cur==pos.ascription->left+(validLen-1))
+            --pos.ascription->validLen;
+        else if(pos.cur==pos.ascription->left)
+        {
+            ++pos.ascription->left;
+            --pos.ascription->validLen;
+        }
+        else
+        {
+            size_t numToMove=pos.ascription->validLen-1-(pos.cur-pos.ascription->left);
+            std::memmove(pos.cur,pos.cur+1,numToMove*sizeof(T));
+            --pos.ascription->validLen;
+        }
+        
+        _maintain(pos.ascription->prev);
+        return iterator::getIterator(index);
 	}
 
-	void push_back(const T &value) 
+	void push_back(const T &value)
 	{
 		node *p = head->prev;
 		++elemCnt;
@@ -319,7 +364,7 @@ public:
 		}
 	}
 
-	void pop_back() 
+	void pop_back()
 	{
 		if (empty())
 			throw container_is_empty();
@@ -330,7 +375,7 @@ public:
 		_maintain();
 	}
 
-	void push_front(const T &value) 
+	void push_front(const T &value)
 	{
 		node *p = head->next;
 		++elemCnt;
@@ -348,7 +393,7 @@ public:
 		}
 	}
 
-	void pop_front() 
+	void pop_front()
 	{
 		if (empty())
 			throw container_is_empty();

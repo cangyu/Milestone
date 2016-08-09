@@ -581,7 +581,15 @@ private:
 	//将链表中较短的node合并
 	void maintain()
 	{
+		node *p = head->next;
+		node *q = nullptr;
+		node *r = head;
+		node *t = nullptr;
 
+		while (p != head)
+		{
+
+		}
 	}
 };
 

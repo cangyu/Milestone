@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <cmath>
 
 namespace sjtu
 {
@@ -581,14 +582,52 @@ private:
 	//将链表中较短的node合并
 	void maintain()
 	{
-		node *p = head->next;
-		node *q = nullptr;
-		node *r = head;
-		node *t = nullptr;
+		const size_t sn = std::sqrt(elemCnt);
+
+		node *p = head->next, *q = head->next, *r = head;
+		size_t curCnt = 0;
 
 		while (p != head)
 		{
+			//找到本次终结点
+			while (q != head && curCnt + q->validLen <= sn)
+			{
+				curCnt += q->validLen;
+				q = q->next;
+			}
 
+			//create new node containing all the elements
+			node *tmp = new node(curCnt);
+			size_t k = 0;
+			for (auto t = p; t != q; t = t->next)
+			{
+				if (t->validLen != 0)
+				{
+					for (auto i = 0; i < t->validLen;i++)
+						new (tmp->left + k++) T(*(t->left+i))
+				}
+			}
+			tmp->validLen = curCnt;
+
+			//删掉中间的零碎节点
+			auto t = p;
+			while (t != q)
+			{
+				auto c = t;
+				t = t->next;
+				delete c;
+			}
+
+			//ReLink
+			r->next = tmp;
+			tmp->next = q;
+			q->prev = tmp;
+			tmp->prev = r;
+
+			//next round
+			r = tmp;
+			p = q;
+			curCnt = 0;
 		}
 	}
 };

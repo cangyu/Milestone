@@ -282,21 +282,30 @@ public:
         if (!pos.isValid(this))
 			throw invalid_iterator();
         
-        //当前块内有空余
-        if(pos.ascription.validLen<pos.ascription.totalLen)
-        {
-            if(pos.ascription.start<pos.ascription.left)//左边有空余
-            {
-                size_t numToMove=pos.cur-pos.ascription->left;
+		++elemCnt;
+        if(pos.ascription.validLen<pos.ascription.totalLen)//当前块内有空余
+		{   
+			//[left,pos)之间元素个数
+			size_t numToMove=pos.cur-pos.ascription->left;
+			
+			//左边空余的数量
+			size_t leftEmptyCnt=pos.ascription->left-pos.ascription->start;
+			//右边空余的数量
+			size_t rightEmptyCnt=pos.ascription->totalLen-leftEmptyCnt-pos.ascription->validLen;
+            
+			if(leftEmptyCnt<rightEmptyCnt)//
+
+
+			if(pos.ascription.start<pos.ascription.left)//左边有空余
                 std::memmove(pos.ascription->left-1,pos.ascription->left,numToMove*sizeof(T));
-                *pos.cur=value;
-            }
-            else//右边有空余
+            else
             {
-                size_t numToMove=pos.ascription->validLen-(pos.cur-pos.ascription->left);
+                
                 std::memmove(pos.cur+1,pos.cur,numToMove*sizeof(T));
-                *pos.cur=value;
             }
+
+
+            *pos.cur=value;
             ++validLen;
             return pos;
         }
@@ -327,7 +336,7 @@ public:
 			throw invalid_iterator();
         
         --elemCnt;
-        if(pos.cur==pos.ascription->left+(pos.ascription->validLen-1))//此时元素个数>=1
+        if(pos.cur==pos.ascription->left+(pos.ascription->validLen-1))//pos指向当前node的最后一个，此时元素个数>=1
         {
 			--pos.ascription->validLen;
 			
@@ -339,19 +348,40 @@ public:
 			//返回该node的第一个元素，若deque中只有一个元素，p将回到head，即end()
 			return iterator(p->left,p,head);
         }
-		else if(pos.cur==pos.ascription->left)//此时元素个数>=2
+		else if(pos.cur==pos.ascription->left)//pos指向当前node的第一个，此时元素个数>=2
         {
             ++pos.ascription->left;
             --pos.ascription->validLen;
 
 			//由于不会出现validLen==0的情况，直接返回指向下一个pos的iterator
-			return iterator(pos.ascription->left,pos.ascription,head);
+			++pos.cur;
+			return pos;
         }
-        else//此时元素个数>=3
+        else//pos指向当前node的非头尾元素，此时元素个数>=3
         {
-            size_t numToMove=pos.ascription->validLen-1-(pos.cur-pos.ascription->left);
-            std::memmove(pos.cur,pos.cur+1,numToMove*sizeof(T));
-            --pos.ascription->validLen;
+			//pos之前的元素个数
+            size_t numToMove=pos.cur-pos.ascription->left;
+
+			if(2*numToMove<pos.ascription->validLen)//前半部分元素少于一半
+			{
+				//[left,pos)之间的元素向后move一个单位
+				std::memmove(pos.ascription->left+1,pos.ascription->left,numToMove*sizeof(T));
+				--pos.ascription->validLen;
+				
+				//返回指向pos后面的元素的iterator
+				++pos.cur;
+				return pos;
+            }
+			else
+			{
+				//[pos+1,left+validLen)之间的元素向前move一个单位
+				numToMove=pos.ascription->validLen-numToMove-1;
+				std::memmove(pos.cur,pos.cur+1,numToMove*sizeof(T));
+           		--pos.ascription->validLen;
+
+				//新的元素替代了pos上原来的元素，直接返回
+				return pos;
+			}
         }
 	}
 

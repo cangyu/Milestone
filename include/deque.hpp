@@ -66,6 +66,7 @@ private:
 
 	size_t elemCnt;
 	node *head;
+	bool hasSplited;
 
 	void exchange(deque &rhs)
 	{
@@ -322,28 +323,36 @@ public:
 	//removes specified element at pos.
 	iterator erase(iterator pos)
 	{
-		if (empty() || !pos.isValid(this))
+		if (empty() || !pos.isValid(this)|| pos==end())
 			throw invalid_iterator();
         
-        size_t index=iterator::getIndex(pos);
         --elemCnt;
-        
-        if(pos.cur==pos.ascription->left+(validLen-1))
-            --pos.ascription->validLen;
-        else if(pos.cur==pos.ascription->left)
+        if(pos.cur==pos.ascription->left+(pos.ascription->validLen-1))//此时元素个数>=1
+        {
+			--pos.ascription->validLen;
+			
+			//找到下一个不为空的node
+			node *p=pos.ascription->next;
+			while(p!=head && p->validLen==0)
+				p=p->next;
+
+			//返回该node的第一个元素，若deque中只有一个元素，p将回到head，即end()
+			return iterator(p->left,p,head);
+        }
+		else if(pos.cur==pos.ascription->left)//此时元素个数>=2
         {
             ++pos.ascription->left;
             --pos.ascription->validLen;
+
+			//由于不会出现validLen==0的情况，直接返回指向下一个pos的iterator
+			return iterator(pos.ascription->left,pos.ascription,head);
         }
-        else
+        else//此时元素个数>=3
         {
             size_t numToMove=pos.ascription->validLen-1-(pos.cur-pos.ascription->left);
             std::memmove(pos.cur,pos.cur+1,numToMove*sizeof(T));
             --pos.ascription->validLen;
         }
-        
-        _maintain(pos.ascription->prev);
-        return iterator::getIterator(index);
 	}
 
 	void push_back(const T &value)

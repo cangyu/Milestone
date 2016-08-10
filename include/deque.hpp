@@ -20,32 +20,42 @@ private:
 		T *start, *left;
         size_t totalLen, validLen;
 
-		node() :start(nullptr), end(nullptr), len(0)
+		node() :
+			start(nullptr), 
+			left(nullptr), 
+			totalLen(0),
+			validLen(0)
 		{
 			prev = next = this;
 		}
 
-		node(size_t _len) :start(new T[_len]), len(0)
+		node(size_t _len) :
+			start(::operator new T[_len]),
+			totalLen(_len),
+			validLen(0)
 		{
 			prev = next = this;
-			end = start + _len;
+			left = start;
 		}
 
 		~node()
 		{
 			delete[] start;
-			start = end = nullptr;
-			len = 0;
+			start = left = nullptr;
+			totalLen = validLen = 0;
 		}
 
-		node(const node &rhs):
-			prev(rhs.prev),
-			next(rhs.next)
+		node(const node &rhs) :
+			totalLen(rhs.validLen), 
+			validLen(rhs.validLen)
 		{
-			len = rhs.len;
-			start = (T*)::operator new(len * sizeof(T));
-			for (int i = 0; i < len; i++)
-				new (start + i) T(*(rhs.start + i));
+			prev = next = this;
+
+			start = ::operator new T[validLen];
+			for (int i = 0; i < validLen; i++)
+				new (start + i) T(*(rhs.left + i));
+
+			left = start;
 		}
 
 		node &operator=(node rhs)
@@ -72,7 +82,12 @@ private:
 	private:
 		void exchange(node &rhs)
 		{
-
+			std::swap(prev, rhs.prev);
+			std::swap(next, rhs.next);
+			std::swap(start, rhs.start);
+			std::swap(left, rhs.left);
+			std::swap(totalLen, rhs.totalLen);
+			std::swap(validLen, rhs.validLen);
 		}
 
 		//头部可用空间
@@ -96,6 +111,7 @@ private:
 	{
 		std::swap(elemCnt, rhs.elemCnt);
 		std::swap(head, rhs.head);
+		std::swap(hasSplited, rhs.hasSplited);
 	}
 
 public:
@@ -103,6 +119,7 @@ public:
 	class iterator
 	{
 		friend class const_iterator;
+
 	private:
 		T *cur;
 		node *ascription, *origin;
@@ -135,16 +152,61 @@ public:
 			iterator tmp = *this;
 			return tmp -= n;
 		}
-		// return th distance between two iterator,
+
+		// return the distance between two iterator,
 		// if these two iterators points to different vectors, throw invaild_iterator.
-		int operator-(const iterator &rhs) const {
-			//TODO
-		}
-		iterator operator+=(const int &n)
+		int operator-(const iterator &rhs) const 
 		{
-			//TODO
+			if (this->origin != rhs.origin)
+				throw invalid_iterator();
+
+			return rhs.getIndex() - this->getIndex();
 		}
-		iterator operator-=(const int &n)
+		iterator& operator+=(const int &n)
+		{
+			if (n > 0)
+			{
+				int curRemainCnt = ascription->validLen - (cur - ascription->left) - 1;
+				if (n <= curRemainCnt)
+					cur += n;
+				else
+				{
+					n -= curRemainCnt;
+					node *p = ascription->next;
+					while (n >= p->validLen)
+					{
+						n -= p->validLen;
+						p = p->next;
+					}
+
+					cur = p->left + n - 1;
+					ascription = p;
+				}
+			}
+			else if (n<0)
+			{
+				n = -n;
+				int frontLeftCnt = cur->ascription->left;
+				if (n <= frontLeftCnt)
+					cur -= n;
+				else
+				{
+					n -= frontLeftCnt;
+					node *p = ascription->prev;
+					while (n >= p->validLen)
+					{
+						n -= p->validLen;
+						p = p->prev;
+					}
+
+					cur = p->left + p->validLen - 1 - n;
+					ascription = p;
+				}
+			}
+
+			return *this;
+		}
+		iterator& operator-=(const int &n)
 		{
 			return *this += -n;
 		}
@@ -157,7 +219,23 @@ public:
 		}
 		iterator& operator++()
 		{
+			//不支持++end()
+			if (cur == nullptr)
+				throw invalid_iterator();
+			
+			if (cur == ascription->left + ascription->validLen - 1)
+			{
+				node *p = ascription->next;
+				while (p != origin && p->validLen == 0)
+					p = p->next;
 
+				cur = p->left;
+				ascription = p;
+			}
+			else
+				++cur;
+
+			return *this;
 		}
 		iterator operator--(int)
 		{
@@ -167,7 +245,27 @@ public:
 		}
 		iterator& operator--()
 		{
+			//不支持--begin()
+			if (ascription == origin->next&& cur == ascription->left)
+				throw invalid_iterator();
 
+			if (cur == ascription->left)//指向当前node的头部
+			{
+				node *p = ascription->prev;
+				while (p != origin && p->validLen == 0)
+					p = p->prev;
+
+				if (p == origin)//--end()
+					cur = p->left;
+				else
+					cur = p->left + p->validLen - 1;
+				
+				ascription = p;
+			}
+			else
+				--cur;
+
+			return *this;
 		}
 
 		//key character of an iterator
@@ -175,6 +273,7 @@ public:
 		{ 
 			return *cur;
 		}
+
 		T* operator->() const noexcept 
 		{ 
 			return &(operator*());
@@ -191,49 +290,335 @@ public:
 		}
 		bool operator!=(const iterator &rhs) const 
 		{ 
-			return cur != rhs.cur;
+			return !operator==(rhs);
 		}
 		bool operator!=(const const_iterator &rhs) const 
 		{
-			return cur != rhs.cur;
+			return !operator==(rhs);
 		}
 
+		//check if the iterator is valid:
 		bool isValid(void *id) const
 		{
+			if (!ascription || !origin)//属性标识不合法
+				return false;
 
+			if ((void*)origin!= id)//不属于由id指示的deque，类型转换优先级高于双目
+				return false;
+			
+			if (ascription == origin)//end()
+				return cur == nullptr;
+			else
+			{
+				node *p = origin->next;
+				while (p != origin && p != ascription)
+					p = p->next;
+
+				if (p == origin)//ascription不存在
+					return false;
+				else
+				{
+					if (p->left - cur > 0)//cur落在left之前
+						return false;
+					else if (cur - p->left >= p->validLen)//cur超出了[left,left+validLen)
+						return false;
+					else
+						return true;
+				}
+			}
+		}
+
+	private:
+		int getIndex() const
+		{
+			int cnt = 0;
+
+			node *p = origin->next;
+			while (p!=origin && p != ascription)
+			{
+				cnt += p->validLen;
+				p = p->next;
+			}
+
+			if (p != origin)
+				cnt += (cur - ascription->left);
+			
+			return cnt;
 		}
 	};
-	class const_iterator {
-		// it should has similar member method as iterator.
-		//  and it should be able to construct from an iterator.
-		private:
-			// data members.
-		public:
-			const_iterator() {
-				// TODO
+	class const_iterator
+	{
+		friend class iterator;
+
+	private:
+		T *cur;
+		node *ascription, *origin;
+
+		void exchange(iterator &rhs)
+		{
+			std::swap(cur, rhs.cur);
+			std::swap(ascription, rhs.ascription);
+			std::swap(origin, rhs.origin);
+		}
+	
+	public:
+		const_iterator() :
+			cur(nullptr), 
+			ascription(nullptr), 
+			origin(nullptr)
+		{}
+		const_iterator(T *_cur, node *_a, node *_ori) :
+			cur(_cur), 
+			ascription(_a), 
+			origin(_ori)
+		{}
+		const_iterator(const const_iterator &rhs) :
+			cur(rhs.cur), 
+			ascription(rhs.ascription), 
+			origin(rhs.origin)
+		{}
+		const_iterator(const iterator &rhs) :
+			cur(rhs.cur), 
+			ascription(rhs.ascription), 
+			origin(rhs.origin)
+		{}
+
+		~const_iterator() {}
+
+		const_iterator& operator=(const_iterator rhs)
+		{
+			exchange(rhs);
+			return *this;
+		}
+
+		const_iterator operator+(const int &n) const
+		{
+			const_iterator tmp = *this;
+			return tmp += n;
+		}
+		const_iterator operator-(const int &n) const
+		{
+			const_iterator tmp = *this;
+			return tmp -= n;
+		}
+
+		// return the distance between two iterator,
+		// if these two iterators points to different vectors, throw invaild_iterator.
+		int operator-(const const_iterator &rhs) const
+		{
+			if (this->origin != rhs.origin)
+				throw invalid_iterator();
+
+			return rhs.getIndex() - this->getIndex();
+		}
+		
+		//move n steps
+		const_iterator& operator+=(const int &n)
+		{
+			if (n > 0)
+			{
+				int curRemainCnt = ascription->validLen - (cur - ascription->left) - 1;
+				if (n <= curRemainCnt)
+					cur += n;
+				else
+				{
+					n -= curRemainCnt;
+					node *p = ascription->next;
+					while (n >= p->validLen)
+					{
+						n -= p->validLen;
+						p = p->next;
+					}
+
+					cur = p->left + n - 1;
+					ascription = p;
+				}
 			}
-			const_iterator(const const_iterator &other) {
-				// TODO
+			else if (n<0)
+			{
+				n = -n;
+				int frontLeftCnt = cur->ascription->left;
+				if (n <= frontLeftCnt)
+					cur -= n;
+				else
+				{
+					n -= frontLeftCnt;
+					node *p = ascription->prev;
+					while (n >= p->validLen)
+					{
+						n -= p->validLen;
+						p = p->prev;
+					}
+
+					cur = p->left + p->validLen - 1 - n;
+					ascription = p;
+				}
 			}
-			const_iterator(const iterator &other) {
-				// TODO
+
+			return *this;
+		}
+		const_iterator& operator-=(const int &n)
+		{
+			return *this += -n;
+		}
+
+		//single move
+		const_iterator operator++(int)
+		{
+			const_iterator tmp = *this;
+			++*this;
+			return tmp;
+		}
+		const_iterator& operator++()
+		{
+			//不支持++end()
+			if (cur == nullptr)
+				throw invalid_iterator();
+
+			if (cur == ascription->left + ascription->validLen - 1)
+			{
+				node *p = ascription->next;
+				while (p != origin && p->validLen == 0)
+					p = p->next;
+
+				cur = p->left;
+				ascription = p;
 			}
-			// And other methods in iterator.
-			// And other methods in iterator.
-			// And other methods in iterator.
+			else
+				++cur;
+
+			return *this;
+		}
+		const_iterator operator--(int)
+		{
+			const_iterator tmp = *this;
+			--*this;
+			return tmp;
+		}
+		const_iterator& operator--()
+		{
+			//不支持--begin()
+			if (ascription == origin->next&& cur == ascription->left)
+				throw invalid_iterator();
+
+			if (cur == ascription->left)//指向当前node的头部
+			{
+				node *p = ascription->prev;
+				while (p != origin && p->validLen == 0)
+					p = p->prev;
+
+				if (p == origin)//--end()
+					cur = p->left;
+				else
+					cur = p->left + p->validLen - 1;
+
+				ascription = p;
+			}
+			else
+				--cur;
+
+			return *this;
+		}
+
+		//key character of an iterator
+		const T& operator*() const
+		{
+			return *cur;
+		}
+
+		const T* operator->() const noexcept
+		{
+			return &(operator*());
+		}
+
+		//check if two iterators pointing to same memory
+		bool operator==(const iterator &rhs) const
+		{
+			return cur == rhs.cur;
+		}
+		bool operator==(const const_iterator &rhs) const
+		{
+			return cur == rhs.cur;
+		}
+		bool operator!=(const iterator &rhs) const
+		{
+			return !operator==(rhs);
+		}
+		bool operator!=(const const_iterator &rhs) const
+		{
+			return !operator==(rhs);
+		}
+
+		//check if the iterator is valid:
+		bool isValid(void *id) const
+		{
+			if (!ascription || !origin)//属性标识不合法
+				return false;
+
+			if ((void*)origin != id)//不属于由id指示的deque，类型转换优先级高于双目
+				return false;
+
+			if (ascription == origin)//end()
+				return cur == nullptr;
+			else
+			{
+				node *p = origin->next;
+				while (p != origin && p != ascription)
+					p = p->next;
+
+				if (p == origin)//ascription不存在
+					return false;
+				else
+				{
+					if (p->left - cur > 0)//cur落在left之前
+						return false;
+					else if (cur - p->left >= p->validLen)//cur超出了[left,left+validLen)
+						return false;
+					else
+						return true;
+				}
+			}
+		}
+
+	private:
+		int getIndex() const
+		{
+			int cnt = 0;
+
+			node *p = origin->next;
+			while (p != origin && p != ascription)
+			{
+				cnt += p->validLen;
+				p = p->next;
+			}
+
+			if (p != origin)
+				cnt += (cur - ascription->left);
+
+			return cnt;
+		}
+
 	};
 
-	deque():elemCnt(0),head(new node()) {}
+	deque():
+		elemCnt(0),
+		head(new node()),
+		hasSplited(false)
+	{}
 
-	deque(const deque &other)
+	deque(const deque &rhs) :
+		elemCnt(rhs.elemCnt), 
+		head(deepCopy(rhs)), 
+		hasSplited(false)
 	{
-
+		maintain();
 	}
 
 	~deque()
 	{
 		clear();
 		delete head;
+		hasSplited = false;
 	}
 
 	deque &operator=(deque other)
@@ -629,6 +1014,26 @@ private:
 			p = q;
 			curCnt = 0;
 		}
+	}
+
+	//深拷贝一个deque
+	node* deepCopy(const deque& rhs)
+	{
+		node *curHead = new node();
+
+		node *p = rhs.head->next;
+
+		while (p != rhs.head)
+		{
+			if (p->validLen != 0)
+			{
+				node *tmp = new node(*p);
+				insert_before(curHead, tmp);
+			}
+			p = p->next;
+		}
+
+		return curHead;
 	}
 };
 

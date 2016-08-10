@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cmath>
+#include <new>
 
 namespace sjtu
 {
@@ -30,7 +31,8 @@ private:
 		}
 
 		node(size_t _len) :
-			start(::operator new T[_len]),
+			//start((T*)::operator new[](_len * sizeof(T))),
+			start((T*)std::malloc(_len * sizeof(T))),
 			totalLen(_len),
 			validLen(0)
 		{
@@ -40,18 +42,20 @@ private:
 
 		~node()
 		{
-			delete[] start;
+			//delete[] start;
+			std::free(start);
 			start = left = nullptr;
 			totalLen = validLen = 0;
 		}
 
 		node(const node &rhs) :
-			totalLen(rhs.validLen), 
-			validLen(rhs.validLen)
+			totalLen(rhs.validLen),
+			validLen(rhs.validLen),
+			//start((T*)::operator new[](rhs.validLen * sizeof(T)))
+			start((T*)std::malloc(rhs.validLen * sizeof(T)))
 		{
 			prev = next = this;
 
-			start = ::operator new T[validLen];
 			for (int i = 0; i < validLen; i++)
 				new (start + i) T(*(rhs.left + i));
 
@@ -64,7 +68,7 @@ private:
 			return *this;
 		}
 
-		node* getBackPtr() const
+		T* getBackPtr() const
 		{
 			return left + validLen - 1;
 		}
@@ -105,13 +109,13 @@ private:
 
 	size_t elemCnt;
 	node *head;
-	bool hasSplited;
+	bool needMaintain;
 
 	void exchange(deque &rhs)
 	{
 		std::swap(elemCnt, rhs.elemCnt);
 		std::swap(head, rhs.head);
-		std::swap(hasSplited, rhs.hasSplited);
+		std::swap(needMaintain, rhs.needMaintain);
 	}
 
 public:
@@ -119,6 +123,7 @@ public:
 	class iterator
 	{
 		friend class const_iterator;
+		friend class deque<T>;
 
 	private:
 		T *cur;
@@ -162,7 +167,9 @@ public:
 
 			return rhs.getIndex() - this->getIndex();
 		}
-		iterator& operator+=(const int &n)
+
+		//从当前位置移动n个step
+		iterator& operator+=(int n)
 		{
 			if (n > 0)
 			{
@@ -173,20 +180,21 @@ public:
 				{
 					n -= curRemainCnt;
 					node *p = ascription->next;
+					--n;
 					while (n >= p->validLen)
 					{
 						n -= p->validLen;
 						p = p->next;
 					}
 
-					cur = p->left + n - 1;
+					cur = p->left + n;
 					ascription = p;
 				}
 			}
 			else if (n<0)
 			{
 				n = -n;
-				int frontLeftCnt = cur->ascription->left;
+				int frontLeftCnt = cur-ascription->left;
 				if (n <= frontLeftCnt)
 					cur -= n;
 				else
@@ -199,14 +207,14 @@ public:
 						p = p->prev;
 					}
 
-					cur = p->left + p->validLen - 1 - n;
+					cur = p->left + p->validLen - n;
 					ascription = p;
 				}
 			}
 
 			return *this;
 		}
-		iterator& operator-=(const int &n)
+		iterator& operator-=(int n)
 		{
 			return *this += -n;
 		}
@@ -349,6 +357,7 @@ public:
 	class const_iterator
 	{
 		friend class iterator;
+		friend class deque<T>;
 
 	private:
 		T *cur;
@@ -603,13 +612,13 @@ public:
 	deque():
 		elemCnt(0),
 		head(new node()),
-		hasSplited(false)
+		needMaintain(false)
 	{}
 
 	deque(const deque &rhs) :
 		elemCnt(rhs.elemCnt), 
 		head(deepCopy(rhs)), 
-		hasSplited(false)
+		needMaintain(true)
 	{
 		maintain();
 	}
@@ -618,7 +627,8 @@ public:
 	{
 		clear();
 		delete head;
-		hasSplited = false;
+		elemCnt = 0;
+		needMaintain = false;
 	}
 
 	deque &operator=(deque other)
@@ -672,11 +682,7 @@ public:
 	//iterator to the beginning
 	iterator begin() 
 	{ 
-		node *p = head->next;
-		while (p != head && p->validLen == 0)
-			p = p->next;
-
-		return iterator(p->left, p, head);
+		return elemCnt == 0 ? end() : find(0);
 	}
 	const_iterator cbegin() const 
 	{ 
@@ -721,7 +727,7 @@ public:
 	//inserts value before pos
 	iterator insert(iterator pos, const T &value)
 	{
-		if (!pos.isValid(this))
+		if (!pos.isValid(head))
 			throw invalid_iterator();
 
 		++elemCnt;
@@ -732,13 +738,14 @@ public:
 			new (tmp->left) T(value);
 			++tmp->validLen;
 
-			insert_after(head->prev, tmp);
+			insert_before(head, tmp);
+			needMaintain = true;
 
 			return iterator(tmp->left, tmp, head);
 		}
 		else
 		{
-			if (pos.ascription.validLen < pos.ascription.totalLen)//当前node有空余
+			if (pos.ascription->validLen < pos.ascription->totalLen)//当前node有空余
 			{
 				//[left,pos)之间元素个数
 				size_t leftMoveCnt = pos.cur - pos.ascription->left;
@@ -795,7 +802,7 @@ public:
 				else//split
 				{
 					node *p = pos.ascription;
-					hasSplited = true;
+					needMaintain = true;
 
 					//[left,pos]之间元素个数
 					size_t leftMoveCnt = pos.cur - p->left + 1;
@@ -853,7 +860,7 @@ public:
 	//removes specified element at pos
 	iterator erase(iterator pos)
 	{
-		if (empty() || !pos.isValid(this) || pos == end())
+		if (empty() || !pos.isValid(head) || pos == end())
 			throw invalid_iterator();
 
 		--elemCnt;
@@ -946,12 +953,12 @@ private:
 
 	//根据下标返回iterator
 	//确保index合法！
-	iterator find(size_t index) const
+	iterator find(size_t index)
 	{
-		if (hasSplited)
+		if (needMaintain)
 		{
 			maintain();
-			hasSplited = false;
+			needMaintain = false;
 		}
 
 		node *p = head->next;
@@ -988,17 +995,17 @@ private:
 			{
 				if (t->validLen != 0)
 				{
-					for (auto i = 0; i < t->validLen;i++)
-						new (tmp->left + k++) T(*(t->left+i))
+					for (auto i = 0; i < t->validLen; i++)
+						new (tmp->left + k++) T(*(t->left + i));
 				}
 			}
 			tmp->validLen = curCnt;
 
 			//删掉中间的零碎节点
-			auto t = p;
+			node *t = p, *c = nullptr;
 			while (t != q)
 			{
-				auto c = t;
+				c = t;
 				t = t->next;
 				delete c;
 			}

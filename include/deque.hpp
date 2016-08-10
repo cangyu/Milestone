@@ -70,7 +70,7 @@ private:
 
 		T* getBackPtr() const
 		{
-			return left + validLen - 1;
+			return left ? left + validLen - 1 : nullptr;
 		}
 
 		bool leftAvailable() const
@@ -97,19 +97,19 @@ private:
 		//头部可用空间
 		size_t leftAvailableCnt() const
 		{
-			return left - start;
+			return left ? left - start : 0;
 		}
 
 		//尾部可用空间
 		size_t rightAvailableCnt() const
 		{
-			return totalLen - leftAvailableCnt() - validLen;
+			return left ? totalLen - leftAvailableCnt() - validLen : 0;
 		}
 	};
 
 	size_t elemCnt;
 	node *head;
-	bool needMaintain;
+	bool *needMaintain;
 
 	void exchange(deque &rhs)
 	{
@@ -609,16 +609,16 @@ public:
 
 	};
 
-	deque():
+	deque() :
 		elemCnt(0),
 		head(new node()),
-		needMaintain(false)
+		needMaintain(new bool(true))
 	{}
 
 	deque(const deque &rhs) :
 		elemCnt(rhs.elemCnt), 
 		head(deepCopy(rhs)), 
-		needMaintain(true)
+		needMaintain(new bool(true))
 	{
 		maintain();
 	}
@@ -627,11 +627,10 @@ public:
 	{
 		clear();
 		delete head;
-		elemCnt = 0;
-		needMaintain = false;
+		delete needMaintain;
 	}
 
-	deque &operator=(deque other)
+	deque& operator=(deque other)
 	{
 		exchange(other);
 		return *this;
@@ -667,7 +666,7 @@ public:
 		if (elemCnt == 0)
 			throw container_is_empty();
 
-		return *(begin());
+		return *(cbegin());
 	}
 
 	//access the last element
@@ -676,27 +675,27 @@ public:
 		if (elemCnt == 0)
 			throw container_is_empty();
 
-		return *(--end());
+		return *(--cend());
 	}
 
 	//iterator to the beginning
-	iterator begin() 
+	iterator begin()
 	{ 
 		return elemCnt == 0 ? end() : find(0);
 	}
-	const_iterator cbegin() const 
+	const_iterator cbegin() const
 	{ 
-		return begin(); 
+		return elemCnt == 0 ? cend() : find(0);
 	}
 
 	//iterator to the end
-	iterator end() 
+	iterator end()
 	{ 
 		return iterator(nullptr, head, head); 
 	}
-	const_iterator cend() const 
+	const_iterator cend() const
 	{ 
-		return end(); 
+		return const_iterator(nullptr, head, head);
 	}
 
     //true if the container is empty
@@ -739,7 +738,7 @@ public:
 			++tmp->validLen;
 
 			insert_before(head, tmp);
-			needMaintain = true;
+			*needMaintain = true;
 
 			return iterator(tmp->left, tmp, head);
 		}
@@ -802,7 +801,7 @@ public:
 				else//split
 				{
 					node *p = pos.ascription;
-					needMaintain = true;
+					*needMaintain = true;
 
 					//[left,pos]之间元素个数
 					size_t leftMoveCnt = pos.cur - p->left + 1;
@@ -925,7 +924,9 @@ public:
 	}
 	void push_front(const T &value)
 	{
-		insert(begin(), value);
+		//避免不必要的maintain
+		iterator tmp(head->next->left, head->next, head);
+		insert(tmp, value);
 	}
 	void pop_front()
 	{
@@ -953,13 +954,10 @@ private:
 
 	//根据下标返回iterator
 	//确保index合法！
-	iterator find(size_t index)
+	iterator find(size_t index) const
 	{
-		if (needMaintain)
-		{
+		if (*needMaintain)
 			maintain();
-			needMaintain = false;
-		}
 
 		node *p = head->next;
 		while (index >= p->validLen)
@@ -972,7 +970,7 @@ private:
 	}
 
 	//将链表中较短的node合并
-	void maintain()
+	void maintain() const
 	{
 		const size_t sn = std::sqrt(elemCnt);
 
@@ -1021,10 +1019,12 @@ private:
 			p = q;
 			curCnt = 0;
 		}
+
+		*needMaintain = false;
 	}
 
 	//深拷贝一个deque
-	node* deepCopy(const deque& rhs)
+	node* deepCopy(const deque& rhs) const
 	{
 		node *curHead = new node();
 

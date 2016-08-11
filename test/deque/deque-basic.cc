@@ -11,7 +11,7 @@ Yours Sincerely. Rabbit.
 #include <iostream>
 #include <vector>
 #include <deque>
-#include "deque.hpp"
+#include "../../include/deque.hpp"
 
 long long randNum(long long x,long long maxNum)
 {

@@ -122,8 +122,6 @@ void TestErase()
 
 int main(int argc, char const *argv[])
 {
-	//freopen("./TestingResults/vector_basic.out", "w", stdout);
-
 	TestConstructor();
 	TestIterators();
 	TestAccessingMethod();

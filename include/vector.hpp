@@ -416,7 +416,7 @@ public:
 	//throw index_out_of_bound if pos is not in [0, size)
 	T & at(const size_t &pos) 
 	{
-		if (pos >= size());
+		if (pos >= size())
 			throw index_out_of_bound();
 
 		return *(start + pos); 
@@ -424,7 +424,7 @@ public:
 
 	const T & at(const size_t &pos) const //用于const对象
 	{
-		if (pos >= size());
+		if (pos >= size())
 			throw index_out_of_bound();
 
 		return *(start + pos);
@@ -610,7 +610,6 @@ private:
 		{
 			start = (T*)std::malloc(2 * sizeof(T));
 			end_of_storage = start + 2;
-			validLen = 2;
 		}
 		else
 		{

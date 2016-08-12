@@ -8,22 +8,15 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
-#include <memory>
 
 namespace sjtu 
 {
-/**
- * a data container like std::vector
- * store data in a successive memory and support random access.
- */
+//a data container like std::vector
+//store data in a successive memory and support random access.
 template<typename T>
 class vector 
 {
 public:
-	/**
-	* a type for actions of the elements of a vector, and you should write
-	*   a class named const_iterator with same interfaces.
-	*/
 	class const_iterator;
 	class iterator 
 	{
@@ -31,18 +24,26 @@ public:
 		T *_head, *_tail;
 		T *cur;
 
-	public:
-		
-		iterator(T *begin = nullptr, T *end = nullptr, T *pos = nullptr) :_head(begin), _tail(end), cur(pos) {}
-		iterator(const iterator &rhs) :_head(rhs._head), _tail(rhs._tail), cur(rhs.cur) {}
+	public:	
+		iterator(T *begin = nullptr, T *end = nullptr, T *pos = nullptr) :
+			_head(begin),
+			_tail(end), 
+			cur(pos) 
+		{}
 
-		T* getCurPtr() const { return cur; }
+		iterator(const iterator &rhs) :
+			_head(rhs._head), 
+			_tail(rhs._tail), 
+			cur(rhs.cur) 
+		{}
 
-		/**
-		 * return a new iterator which pointer n-next elements
-		 *   even if there are not enough elements, just return the answer.
-		 * as well as operator-
-		 */
+		T* getCurPtr() const 
+		{ 
+			return cur; 
+		}
+
+		//return a new iterator which points to the  n-next element,
+		//even if there are not enough elements.
 		iterator operator+(const int &n) const 
 		{
 			iterator it(*this);
@@ -67,76 +68,59 @@ public:
 
 			return cur - rhs.cur;
 		}
+
 		iterator operator+=(const int &n)
 		{
 			cur += n;
 			return *this;
 		}
+
 		iterator operator-=(const int &n) 
 		{
 			cur -= n;
 			return *this;
 		}
 
-		/**
-		 * iter++
-		 */
 		iterator operator++(int)//后++不能作为左值
 		{
 			iterator tmp(*this);
-			cur += 1;
+			++cur;
 			return tmp;
 		}
 
-		/**
-		 * ++iter
-		 */
 		iterator& operator++()//前++可以作为左值，因此返回的是引用
 		{
-			cur += 1;
+			++cur;
 			return *this;
 		}
 
-		/**
-		 * iter--
-		 */
 		iterator operator--(int) 
 		{
 			iterator tmp;
-			cur -= 1;
+			--cur;
 			return tmp;
 		}
 
-		/**
-		 * --iter
-		 */
 		iterator& operator--() 
 		{
-			cur -= 1;
+			--cur;
 			return *this;
 		}
 
-		/**
-		 * *it
-		 */
-		T& operator*() const { return *cur; }
+		T& operator*() const 
+		{ 
+			return *cur; 
+		}
 
-		/**
-		 * a operator to check whether two iterators are same (pointing to the same memory).
-		 */
+		//check whether two iterators are same (pointing to the same memory).
 		bool operator==(const iterator &rhs) const { return cur == rhs.cur; }
 		bool operator==(const const_iterator &rhs) const { return cur == rhs.getCurPtr(); }
 		
-		/**
-		 * some other operator for iterator.
-		 */
 		bool operator!=(const iterator &rhs) const { return !operator==(rhs); }
 		bool operator!=(const const_iterator &rhs) const { return !operator==(rhs); }
 	};
 
-	/**
-	 * has same function as iterator, just for a const object.
-	 */
+	//has same function as iterator, just for a const object.
 	class const_iterator
 	{
 	private:
@@ -144,22 +128,30 @@ public:
 		T *cur;
 
 	public:
-		const_iterator(T *begin = nullptr, T *end = nullptr, T *pos = nullptr) :_head(begin), _tail(end), cur(pos) {}
-		const_iterator(const iterator &rhs) :_head(rhs._head), _tail(rhs._tail), cur(rhs.cur) {}
+		const_iterator(T *begin = nullptr, T *end = nullptr, T *pos = nullptr) :
+			_head(begin), 
+			_tail(end), 
+			cur(pos) 
+		{}
 
-		T* getCurPtr() const { return cur; }
+		const_iterator(const iterator &rhs) :
+			_head(rhs._head), 
+			_tail(rhs._tail), 
+			cur(rhs.cur) 
+		{}
 
-		/**
-		* return a new iterator which pointer n-next elements
-		*   even if there are not enough elements, just return the answer.
-		* as well as operator-
-		*/
+		T* getCurPtr() const 
+		{ 
+			return cur; 
+		}
+
 		const_iterator operator+(const int &n) const
 		{
 			const_iterator it(*this);
 			it.cur += n;
 			return it;
 		}
+
 		const_iterator operator-(const int &n) const
 		{
 			const_iterator it(*this);

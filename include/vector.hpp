@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
+#include <new>
 
 namespace sjtu 
 {
@@ -20,329 +21,430 @@ public:
 	class const_iterator;
 	class iterator 
 	{
+		friend class const_iterator;
+		friend class vector<T>;
+
 	private:
-		T *_head, *_tail;
-		T *cur;
+		vector<T> *ascription;
+		T *start;
+		int index;
+
+		void exchange(iterator &rhs)
+		{
+			std::swap(ascription, rhs.ascription);
+			std::swap(start, rhs.start);
+			std::swap(index, rhs.index);
+		}
 
 	public:	
-		iterator(T *begin = nullptr, T *end = nullptr, T *pos = nullptr) :
-			_head(begin),
-			_tail(end), 
-			cur(pos) 
+		iterator(vector<T> *_a=nullptr, T *_s=nullptr, int _i=0) :
+			ascription(_a),
+			start(_s),
+			index(_i)
 		{}
 
 		iterator(const iterator &rhs) :
-			_head(rhs._head), 
-			_tail(rhs._tail), 
-			cur(rhs.cur) 
+			ascription(rhs.ascription),
+			start(rhs.start),
+			index(rhs.index)
 		{}
 
-		T* getCurPtr() const 
-		{ 
-			return cur; 
+		~iterator() {}
+
+		iterator& operator=(iterator rhs)
+		{
+			exchange(rhs);
+			return *this;
 		}
 
 		//return a new iterator which points to the  n-next element,
 		//even if there are not enough elements.
 		iterator operator+(const int &n) const 
 		{
-			iterator it(*this);
-			it.cur += n;
-			return it;
+			iterator tmp(*this);
+			tmp += n;
+			return tmp;
 		}
+		
 		iterator operator-(const int &n) const
 		{
-			iterator it(*this);
-			it.cur -= n;
-			return it;
+			iterator tmp(*this);
+			tmp -= n;
+			return tmp;
 		}
 
-		/**
-		 * return the distance between two iterator,
-		 * if these two iterators points to different vectors, throw invaild_iterator.
-		 */ 
+		//return the distance between two iterator,
+		//if these two iterators points to different vectors, throw invaild_iterator()
 		int operator-(const iterator &rhs) const
 		{
-			if (!(_head == rhs._head && _tail == rhs._tail))
+			if (ascription != rhs.ascription || start != rhs.start)
 				throw invalid_iterator();
 
-			return cur - rhs.cur;
+			return index - rhs.index;
 		}
 
 		iterator operator+=(const int &n)
 		{
-			cur += n;
+			index += n;
 			return *this;
 		}
 
 		iterator operator-=(const int &n) 
 		{
-			cur -= n;
+			operator+=(-n);
 			return *this;
 		}
 
 		iterator operator++(int)//后++不能作为左值
 		{
 			iterator tmp(*this);
-			++cur;
+			++*this;
 			return tmp;
 		}
 
 		iterator& operator++()//前++可以作为左值，因此返回的是引用
 		{
-			++cur;
+			operator+=(1);
 			return *this;
 		}
 
 		iterator operator--(int) 
 		{
-			iterator tmp;
-			--cur;
+			iterator tmp(*this);
+			--*this;
 			return tmp;
 		}
 
 		iterator& operator--() 
 		{
-			--cur;
+			operator-=(1);
 			return *this;
 		}
 
 		T& operator*() const 
 		{ 
-			return *cur; 
+			return *(start + index);
 		}
 
 		//check whether two iterators are same (pointing to the same memory).
-		bool operator==(const iterator &rhs) const { return cur == rhs.cur; }
-		bool operator==(const const_iterator &rhs) const { return cur == rhs.getCurPtr(); }
+		bool operator==(const iterator &rhs) const 
+        { 
+			if (ascription != rhs.ascription)
+				return false;
+			else if (start != rhs.start)
+				return false;
+			else
+				return index == rhs.index;
+        }
+        
+        bool operator==(const const_iterator &rhs) const 
+        { 
+			if (ascription != rhs.ascription)
+				return false;
+			else if (start != rhs.start)
+				return false;
+			else
+				return index == rhs.index;
+        }
 		
-		bool operator!=(const iterator &rhs) const { return !operator==(rhs); }
-		bool operator!=(const const_iterator &rhs) const { return !operator==(rhs); }
+		bool operator!=(const iterator &rhs) const 
+        { 
+            return !operator==(rhs); 
+        }
+		
+        bool operator!=(const const_iterator &rhs) const 
+        { 
+            return !operator==(rhs); 
+        }
+
+		int getIndex() const
+		{
+			return index;
+		}
+
+		bool isValid(void *id)
+		{
+			if (id && ascription != id)
+				return false;
+			else if (start != ((vector<T>*)id)->start)
+				return false;
+			else if (index < 0)
+				return false;
+			else
+				return index <= ((vector<T>*)id)->validLen;
+		}
 	};
 
 	//has same function as iterator, just for a const object.
 	class const_iterator
 	{
+		friend class iterator;
+		friend class vector<T>;
+
 	private:
-		T *_head, *_tail;
-		T *cur;
+		const vector<T> *ascription;
+		T *start;
+		int index;
 
-	public:
-		const_iterator(T *begin = nullptr, T *end = nullptr, T *pos = nullptr) :
-			_head(begin), 
-			_tail(end), 
-			cur(pos) 
-		{}
-
-		const_iterator(const iterator &rhs) :
-			_head(rhs._head), 
-			_tail(rhs._tail), 
-			cur(rhs.cur) 
-		{}
-
-		T* getCurPtr() const 
-		{ 
-			return cur; 
+		void exchange(const_iterator &rhs)
+		{
+			std::swap(ascription, rhs.ascription);
+			std::swap(start, rhs.start);
+			std::swap(index, rhs.index);
 		}
 
+	public:
+		const_iterator(const vector<T> *_a = nullptr, T *_s = nullptr, int _i = 0) :
+			ascription(_a),
+			start(_s),
+			index(_i)
+		{}
+
+		const_iterator(const const_iterator &rhs) :
+			ascription(rhs.ascription),
+			start(rhs.start),
+			index(rhs.index)
+		{}
+
+		//construct from iterator
+		const_iterator(const iterator &rhs) :
+			ascription(rhs.ascription),
+			start(rhs.start),
+			index(rhs.index)
+		{}
+
+		~const_iterator() {}
+
+		const_iterator& operator=(const_iterator rhs)
+		{
+			exchange(rhs);
+			return *this;
+		}
+
+		//return a new iterator which points to the  n-next element,
+		//even if there are not enough elements.
 		const_iterator operator+(const int &n) const
 		{
-			const_iterator it(*this);
-			it.cur += n;
-			return it;
+			const_iterator tmp(*this);
+			tmp += n;
+			return tmp;
 		}
 
 		const_iterator operator-(const int &n) const
 		{
-			const_iterator it(*this);
-			it.cur -= n;
-			return it;
+			const_iterator tmp(*this);
+			tmp -= n;
+			return tmp;
 		}
 
-		/**
-		 * return the distance between two const_iterators,
-		 * if these two const_iterators points to different vectors, throw invaild_iterator.
-		 */
+		//return the distance between two iterator,
+		//if these two iterators points to different vectors, throw invaild_iterator()
 		int operator-(const const_iterator &rhs) const
 		{
-			if (!(_head == rhs._head && _tail == rhs.tail))
+			if (ascription != rhs.ascription || start != rhs.start)
 				throw invalid_iterator();
 
-			return cur - rhs.cur;
+			return index - rhs.index;
 		}
-		const_iterator operator+=(const int &n) 
+
+		const_iterator operator+=(const int &n)
 		{
-			cur += n;
+			index += n;
 			return *this;
 		}
+
 		const_iterator operator-=(const int &n)
 		{
-			cur -= n;
+			operator+=(-n);
 			return *this;
 		}
 
-		/**
-		* iter++
-		*/
-		const_iterator operator++(int) //后++不能作为左值
+		const_iterator operator++(int)//后++不能作为左值
 		{
-			const_iterator tmp(*this);
-			cur += 1;
+			iterator tmp(*this);
+			++*this;
 			return tmp;
 		}
 
-		/**
-		* ++iter
-		*/
-		const_iterator& operator++()
+		const_iterator& operator++()//前++可以作为左值，因此返回的是引用
 		{
-			cur += 1;
+			operator+=(1);
 			return *this;
 		}
 
-		/**
-		* iter--
-		*/
 		const_iterator operator--(int)
 		{
-			const_iterator tmp;
-			cur -= 1;
+			iterator tmp(*this);
+			--*this;
 			return tmp;
 		}
 
-		/**
-		* --iter
-		*/
 		const_iterator& operator--()
 		{
-			cur -= 1;
+			operator-=(1);
 			return *this;
 		}
 
-		/**
-		* *it，和普通的iterator的区别在于此，解引用后得到的值不能作为左值继续使用，因此不是返回引用
-		*/
-		T operator*() const { return *cur; }
-		
-		/**
-		 * a operator to check whether two iterators are same (pointing to the same memory).
-		 */
-		bool operator==(const iterator &rhs) const { return cur == rhs.cur; }
-		bool operator==(const const_iterator &rhs) const { return cur == rhs.cur; }
-		
-		/**
-		* some other operator for iterator.
-		*/
-		bool operator!=(const iterator &rhs) const { return cur != rhs.cur; }
-		bool operator!=(const const_iterator &rhs) const { return cur != rhs.cur; }
+		const T& operator*() const
+		{
+			return *(start + index);
+		}
+
+		//check whether two iterators are same (pointing to the same memory).
+		bool operator==(const iterator &rhs) const
+		{
+			if (ascription != rhs.ascription)
+				return false;
+			else if (start != rhs.start)
+				return false;
+			else
+				return index == rhs.index;
+		}
+
+		bool operator==(const const_iterator &rhs) const
+		{
+			if (ascription != rhs.ascription)
+				return false;
+			else if (start != rhs.start)
+				return false;
+			else
+				return index == rhs.index;
+		}
+
+		bool operator!=(const iterator &rhs) const
+		{
+			return !operator==(rhs);
+		}
+
+		bool operator!=(const const_iterator &rhs) const
+		{
+			return !operator==(rhs);
+		}
+
+		int getIndex() const
+		{
+			return index;
+		}
+
+		bool isValid(void *id)
+		{
+			if (id && ascription != id)
+				return false;
+			else if (start != ((vector<T>*)id)->start)
+				return false;
+			else if (index < 0)
+				return false;
+			else
+				return index <= ((vector<T>*)id)->validLen;
+		}
 	};
 
-protected:
-	T *start, *finish, *end_of_storage;
+private:
+	T *start, *end_of_storage;
+	size_t validLen;
+
+	void exchange(vector &rhs)
+	{
+		std::swap(start, rhs.start);
+		std::swap(end_of_storage, rhs.end_of_storage);
+		std::swap(validLen, rhs.validLen);
+	}
 
 public:
-	/**
-	 * Constructs
-	 * At least three: default constructor, copy constructor and a constructor for std::vector
-	 */
-	vector() :start(nullptr),finish(nullptr),end_of_storage(nullptr){}
-	vector(const vector &other) 
+	vector() :
+		start(nullptr), 
+		end_of_storage(nullptr), 
+		validLen(0)
+	{}
+
+	vector(const vector &rhs) :
+		start(nullptr),
+		end_of_storage(nullptr),
+		validLen(rhs.validLen)
 	{
-		const int c = other.capacity();
-		const int n = other.size();
+		if (validLen > 0)
+		{
+			start = (T*)std::malloc(validLen * sizeof(T));
+			end_of_storage = start + validLen;
 
-		start = (T*)malloc(c * sizeof(T));
-		end_of_storage = start + c;
-
-		for (int i = 0; i < n; i++)//不能简单地memcpy，有可能在元素内部还有动态指针，用构造函数来保证“深拷贝”的可靠性！！！
-			new (start + i) T(*(other.start + i));
-
-		finish = start + n;
-	}
-	vector(const std::vector<T> &other)
-	{
-		const int c = other.capacity();
-		const int n = other.size();
-
-		start = (T*)malloc(c * sizeof(T));
-		end_of_storage = start + c;
-		for (int i = 0; i < n; i++)
-			*(start + i) = other[i];
-		finish = start + n;
-	}
-	vector(const int n, const T &elem)
-	{
-		start = (T*)malloc(n * sizeof(T));
-		finish = end_of_storage = start + n;
-		std::fill_n(start, n, elem);
+			for (auto i = 0; i < validLen; i++)//不能简单地memcpy，有可能在元素内部还有动态指针，用构造函数来保证“深拷贝”的可靠性！！！
+				new (start + i) T(*(rhs.start + i));
+		}
 	}
 
-	/**
-	 * Destructor
-	 */
+	vector(const std::vector<T> &rhs) :
+		start(nullptr),
+		end_of_storage(nullptr),
+		validLen(rhs.size())
+	{
+		if (validLen > 0)
+		{
+			start = (T*)malloc(validLen * sizeof(T));
+			end_of_storage = start + validLen;
+			for (auto i = 0; i < validLen; i++)
+				new (start + i) T(rhs[i]);
+		}
+	}
+
+	vector(int n, const T &elem) :
+		start(nullptr),
+		end_of_storage(nullptr),
+		validLen(n)
+	{
+		if (validLen > 0)
+		{
+			start = (T*)std::malloc(validLen*sizeof(T));
+			end_of_storage = start + validLen;
+			for (auto i = 0; i < validLen; i++)
+				new (start + i) T(elem);
+		}
+	}
+
 	~vector() 
 	{
+		clear();
 		free(start);
-		start = finish = end_of_storage = nullptr;
 	}
 
-	/**
-	 * Assignment operator
-	 */
-	vector &operator=(const vector &other) 
+	vector &operator=(vector rhs) 
 	{
-		const int n = other.size();
-		free(start);
-		start = (T*)malloc(n * sizeof(T));
-		memcpy(start, other.start, n * sizeof(T));
-		finish = end_of_storage = start + n;
+		exchange(rhs);
 		return *this;
 	}
 
-	/**
-	 * assigns specified element with bounds checking
-	 * throw index_out_of_bound if pos is not in [0, size)
-	 */
+	//assigns specified element with bounds checking
+	//throw index_out_of_bound if pos is not in [0, size)
 	T & at(const size_t &pos) 
 	{
-		if (!_bound_check(pos))
+		if (pos >= size());
 			throw index_out_of_bound();
 
 		return *(start + pos); 
 	}
+
 	const T & at(const size_t &pos) const //用于const对象
 	{
-		if (!_bound_check(pos))
+		if (pos >= size());
 			throw index_out_of_bound();
 
 		return *(start + pos);
 	}
 
-	/**
-	 * assigns specified element with bounds checking
-	 * throw index_out_of_bound if pos is not in [0, size)
-	 * !!! Pay attentions
-	 *   In STL this operator does not check the boundary but I want you to do.
-	 */
+	//assigns specified element with bounds checking
+	//throw index_out_of_bound if pos is not in [0, size)
+	//!!! Pay attention:
+	//   In STL this operator does not check the boundary but we do this job here
 	T & operator[](const size_t &pos) 
 	{
-		if (!_bound_check(pos))
-			throw index_out_of_bound();
-
-		return *(start + pos);
+		return at(pos);
 	}
+
 	const T & operator[](const size_t &pos) const //用于const对象
 	{
-		if (!_bound_check(pos))
-			throw index_out_of_bound();
-
-		return *(start + pos);
+		return at(pos);
 	}
 
-	/**
-	 * access the first element.
-	 * throw container_is_empty if size == 0
-	 */
+	//access the first element
 	const T & front() const 
 	{
 		if (size() == 0)
@@ -350,182 +452,183 @@ public:
 
 		return *start;
 	}
-	/**
-	 * access the last element.
-	 * throw container_is_empty if size == 0
-	 */
+
+	//access the last element
 	const T & back() const 
 	{
 		if (size() == 0)
 			throw container_is_empty();
 
-		return *(finish - 1);
+		return *(start + validLen - 1);
 	}
 
-	/**
-	 * returns an iterator to the beginning.
-	 */
-	iterator begin() { return iterator(start, finish, start); }
-	const_iterator cbegin() const { return const_iterator(start, finish, start); }
-	/**
-	 * returns an iterator to the end.
-	 */
-	iterator end() { return iterator(start, finish, finish); }
-	const_iterator cend() const { return const_iterator(start, finish, finish); }
-	
-	/**
-	 * checks whether the container is empty
-	 */
-	bool empty() const { return finish == start; }
-	/**
-	 * returns the number of elements
-	 */
-	size_t size() const { return (size_t)(finish - start); }
-	/**
-	 * returns the number of elements that can be held in currently allocated storage.
-	 */
-	size_t capacity() const { return (size_t)(end_of_storage - start); }
-	/**
-	 * clears the contents
-	 */
-	void clear() { finish = start; }
+	//return an iterator to the beginning
+	//注意：如果新建一个vector后就取auto it=begin(),然后 *it=xxx,会WA，在g++上也是这样
+	iterator begin() 
+	{ 
+		return iterator(this, start, 0);
+	}
 
-	/**
-	 * inserts value before pos
-	 * returns an iterator pointing to the inserted value.
-	 */
+	const_iterator cbegin() const
+	{ 
+		return const_iterator(this, start, 0);
+	}
+
+	//return an iterator to the end
+	iterator end()
+	{ 
+		return iterator(this, start, validLen);
+	}
+
+	const_iterator cend() const 
+	{ 
+		return const_iterator(this, start, validLen);
+	}
+	
+	//check whether the container is empty
+	bool empty() const 
+	{ 
+		return size() == 0;
+	}
+
+	//return the number of elements
+	size_t size() const
+	{ 
+		return validLen;
+	}
+
+	//the number of elements that can be held in currently allocated storage
+	size_t capacity() const 
+	{ 
+		return end_of_storage ? (size_t)(end_of_storage - start) : 0;
+	}
+	
+	//clear the contents
+	void clear() 
+	{ 
+		for (auto i = 0; i < validLen; i++)
+			(start + i)->~T();
+		
+		validLen = 0;
+	}
+
+	//在pos所指向的位置之前插入新的value
+	//返回指向新插入元素的iterator，pos可以是end()
 	iterator insert(iterator pos, const T &value) 
 	{
-		int targetIndex = pos - begin();
-
-		if (!_bound_check(targetIndex))
+		if (!pos.isValid(this))//若pos不属于本vector或者pos失效了，则无法插入
 			throw invalid_iterator();
 
-		if (size() == capacity())
-			doubleSpace();//有可能导致之前的迭代器失效,所以下面不能直接返回pos
-
-		T *targetPtr = start + targetIndex;
-		int num = finish - targetPtr;
-
-		memmove(targetPtr + 1, targetPtr, num * sizeof(T));
-		++finish;
-
-		*targetPtr = value;
-
-		return iterator(start, finish, targetPtr);
+		return insert(pos.getIndex(), value);
 	}
-	/**
-	 * inserts value at index ind.
-	 * after inserting, this->at(ind) == value is true
-	 * returns an iterator pointing to the inserted value.
-	 * throw index_out_of_bound if ind > size (in this situation ind can be size because after inserting the size will increase 1.)
-	 */
-	iterator insert(const size_t &ind, const T &value) 
+
+	//在给定的index之前插入新元素value
+	//index可以为size()，即在尾部插入
+	iterator insert(int index, const T &value) 
 	{
-		if (!_bound_check(ind))
+		//若index超出size()则非法
+		if (index > size())
 			throw index_out_of_bound();
 
+		//若空间已满，要扩容
 		if (size() == capacity())
 			doubleSpace();
 
-		++finish;
-		T *last = finish, *target = start + ind;
-		while (last != target)//这样逐个操作与memmove相比效果如何？--不是一般的慢。。。
+		//[index,end_of_storage)向后move一格
+		size_t numToMove = validLen - index;
+		T *dstStart = start + validLen;
+		T *srcStart = dstStart - 1;
+
+		new (dstStart) T(*srcStart);//尾部的元素无需析构
+		for (auto i = 1; i < numToMove; i++)
 		{
-			new (last) T(*(last - 1));
-			--last;
+			(dstStart - i)->~T();
+			new (dstStart - i) T(*(srcStart - i));
 		}
 
-		new (last) T(value);
+		//insert
+		*(start + index) = value;
+		++validLen;
 
-		return iterator(start, finish, last);
+		return iterator(this, start, index);
 	}
 
-	/**
-	 * removes the element at pos.
-	 * return an iterator pointing to the following element.
-	 * If the iterator pos refers the last element, the end() iterator is returned.
-	 */
+	//删除由pos指定的位置上的元素
+	//pos不能为end()
 	iterator erase(iterator pos) 
 	{
-		if (pos + 1 != end())
-		{
-			T *targetPtr = pos.getCurPtr();
-			int num = finish - (targetPtr + 1);
-			memmove(targetPtr, targetPtr + 1, num * sizeof(T));//memmove可保证在有局部重叠时结果的正确性，而memcpy则不能保证
-		}
-		--finish;
-		finish->~T();
-		return pos;
+		if (!pos.isValid(this) || pos == end())
+			throw invalid_iterator();
+
+		return erase(pos.getIndex());
 	}
-	/**
-	 * removes the element with index ind.
-	 * return an iterator pointing to the following element.
-	 * throw index_out_of_bound if ind >= size
-	 */
-	iterator erase(const size_t &ind)
+
+	//删除由index指定的元素
+	iterator erase(int index)
 	{
-		if (ind >= size())
+		//index必须是有效的下标,包含了vector为空的情况
+		if (index >= size())
 			throw index_out_of_bound();
 
-		if (ind + 1 != size())
+		//[index+1,end_of_storage)向前move一格
+		size_t numToMove = size() - index - 1;
+		T *dstStart = start + index;
+		T *srcStart = dstStart + 1;
+
+		for (auto i = 0; i < numToMove; i++)
 		{
-			T *targetPtr = start + ind;
-			int num = finish - (targetPtr + 1);
-			memmove(targetPtr, targetPtr + 1, num * sizeof(T));//注意这里传过去的数量是以字节为单位的！！！
+			(dstStart + i)->~T();
+			new (dstStart + i) T(*(srcStart + i));
 		}
-		--finish;
-		finish->~T();
-		return iterator(start, finish, start + ind);
+
+		//释放最后一格处元素所占有的动态资源
+		(dstStart+numToMove)->~T();
+		--validLen;
+
+		//return
+		return iterator(this, start, index);
 	}
-	/**
-	 * adds an element to the end.
-	 */
+
 	void push_back(const T &value) 
 	{
-		if (size() == capacity())
-			doubleSpace();
-
-		new (finish) T(value);
-		++finish;
+		insert(end(), value);
 	}
-	/**
-	 * remove the last element from the end.
-	 * throw container_is_empty if size() == 0
-	 */
+
 	void pop_back() 
 	{
 		if (size() == 0)
 			throw container_is_empty();
 
-		--finish;
-		finish->~T();
+		erase(--end());
 	}
 
 private:
-	bool _bound_check(const size_t &pos) const { return pos >= 0 && pos < size(); }
-
+	//将原空间扩大一倍并拷贝原始数据
 	void doubleSpace()
 	{
 		if (capacity() == 0)
 		{
-			start = (T*)malloc(2 * sizeof(T));
-			finish = start;
+			start = (T*)std::malloc(2 * sizeof(T));
 			end_of_storage = start + 2;
+			validLen = 2;
 		}
 		else
 		{
-			int originalSize = capacity();
-			T *data = (T*)malloc(2 * originalSize * sizeof(T));
-			memcpy(data, start, originalSize * sizeof(T));
-			free(start);
+			size_t newSize = 2 * capacity();
+			
+			T *data = (T*)std::malloc(newSize * sizeof(T));
+			for (auto i = 0; i < validLen; i++)
+			{
+				new (data + i) T(*(start + i));
+				(start + i)->~T();
+			}
+			std::free(start);
+
 			start = data;
-			finish = start + originalSize;
-			end_of_storage = start + originalSize * 2;
+			end_of_storage = start + newSize;
 		}
 	}
 };
 
 }
-
 #endif

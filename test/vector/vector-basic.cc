@@ -1,4 +1,4 @@
-#include "vector.hpp"
+#include "../../include/vector.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -122,7 +122,7 @@ void TestErase()
 
 int main(int argc, char const *argv[])
 {
-	freopen("./TestingResults/vector_basic.out", "w", stdout);
+	//freopen("./TestingResults/vector_basic.out", "w", stdout);
 
 	TestConstructor();
 	TestIterators();

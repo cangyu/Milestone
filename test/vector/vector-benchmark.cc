@@ -1,12 +1,10 @@
-#include "vector.hpp"
+#include "../../include/vector.hpp"
 #include <iostream>
 #include <vector>
 #include <ctime>
 
 int main()
 {
-	freopen("./TestingResults/vector_benchmark.out", "w", stdout);
-
 	clock_t start, finish;
 	start = clock();
 

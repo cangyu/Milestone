@@ -1,8 +1,8 @@
-#include "vector.hpp"
+#include "../../include/vector.hpp"
 
-#include "class-integer.hpp"
-#include "class-matrix.hpp"
-#include "class-bint.hpp"
+#include "../common/class-integer.hpp"
+#include "../common/class-matrix.hpp"
+#include "../common/class-bint.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -45,8 +45,6 @@ void TestBint()
 
 int main()
 {
-	freopen("./TestingResults/vector_advanced.out", "w", stdout);
-
 	TestInteger();
 	TestMatrix();
 	TestBint();

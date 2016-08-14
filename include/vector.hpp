@@ -195,11 +195,6 @@ public:
 			return !operator==(rhs);
 		}
 
-		int getIndex() const
-		{
-			return index;
-		}
-
 		bool isValid(void *id) const
 		{
 			if (id && ascription != id)
@@ -357,11 +352,6 @@ public:
 		bool operator!=(const const_iterator &rhs) const
 		{
 			return !operator==(rhs);
-		}
-
-		int getIndex() const
-		{
-			return index;
 		}
 
 		bool isValid(void *id) const
@@ -546,7 +536,7 @@ public:
 		if (!pos.isValid(this))//若pos不属于本vector或者pos失效了，则无法插入
 			throw invalid_iterator();
 
-		return insert(pos.getIndex(), value);
+		return insert(pos.index, value);
 	}
 
 	//在给定的index之前插入新元素value
@@ -586,7 +576,7 @@ public:
 		if (!pos.isValid(this))
 			throw invalid_iterator();
 
-		return erase(pos.getIndex());
+		return erase(pos.index);
 	}
 
 	//删除由index指定的元素

@@ -1,8 +1,8 @@
 # Milestone
 Course project for Data Structure.  
-Containers like *vector, list, deque, stack, queue, priority\_queue, map, and unordered\_map* were implemented.  
-Also, some generic algorithms like *sort, list\_sort and make\_heap* were done at last.  
-All the code were checked using valgrind to ensure that there's no memory leak, Suggestions and advices are warmly welcom!
+Containers like ***vector, list, deque, stack, queue, priority\_queue, map, and unordered\_map*** were implemented.  
+Also, some generic algorithms like ***sort, list\_sort and make\_heap*** were done at last.  
+All the code were checked using valgrind to ensure that there's no memory leak. Suggestions are welcom!
 ## Implementation details
 ###vector
 The key part of a vector is the __erase__ and __insert__ function. Special attentation should be payed to the so called "deep copy" when moving the objects inside or using the assignment operator, since objects may have pointers pointing to dynamic memory outside the vector. To handle this, I generally calls the placement new operator to construct an new object in target address and calls the destructor to desturct the original object latter.  

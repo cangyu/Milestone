@@ -200,7 +200,7 @@ public:
 			return index;
 		}
 
-		bool isValid(void *id)
+		bool isValid(void *id) const
 		{
 			if (id && ascription != id)
 				return false;
@@ -364,7 +364,7 @@ public:
 			return index;
 		}
 
-		bool isValid(void *id)
+		bool isValid(void *id) const
 		{
 			if (id && ascription != id)
 				return false;
@@ -566,12 +566,12 @@ public:
 		T *dstStart = start + validLen;
 		T *srcStart = dstStart - 1;
 
-		new (dstStart) T(*(srcStart));
-		for (auto i = 1; i < numToMove; i++)
+		for (auto i = 0; i < numToMove; i++)
 		{
-			(dstStart - i)->~T();
 			new (dstStart - i) T(*(srcStart - i));
+			(dstStart - i)->~T();
 		}
+		
 		//insert
 		new (start + index) T(value);
 		++validLen;

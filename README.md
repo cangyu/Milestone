@@ -5,7 +5,7 @@ Also, some generic algorithms like ***sort, list\_sort and make\_heap*** were do
 All the code were checked using valgrind to ensure that there's no memory leak. Suggestions are welcom!
 ## Implementation details
 ###vector
-The key part of a vector is the __erase__ and __insert__ function.  
+&emsp;The key part of a vector is the __erase__ and __insert__ function.  
 &emsp;Special attentation should be payed to the so called "deep copy" when moving the objects inside or using the assignment operator, since objects may have pointers pointing to dynamic memory outside the vector.  
 &emsp;To handle this, I generally calls the placement new operator to construct an new object in target address and calls the destructor to desturct the original object latter.  
   

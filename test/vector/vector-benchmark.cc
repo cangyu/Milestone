@@ -22,7 +22,7 @@ int main()
 	}
 
 	finish = clock();
-	std::cout << finish - start << "ms" << std::endl;
+	std::cout << (double)(finish - start)/CLOCKS_PER_SEC*1000 << "ms" << std::endl;
 
 	return 0;
 }

@@ -13,7 +13,8 @@ const int m = 1000;
 
 const int limitN = n + 5;
 
-struct Edge {
+struct Edge 
+{
 	int v, w;
 	constexpr Edge() : v(0), w(0) {}
 	Edge(const int &_v, const int &_w) : v(_v), w(_w) {}

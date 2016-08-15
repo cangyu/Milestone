@@ -4,7 +4,7 @@
 #include <vector>
 #include <queue>
 
-#include "list.hpp"
+#include "../../include/list.hpp"
 
 std::default_random_engine myRandom(10203);
 
@@ -83,8 +83,6 @@ void Spfa()
 
 int main()
 {
-	freopen("testResult_list_benchmark.txt", "w", stdout);
-
 	ConstructGraph();
 	RemoveEdges();
 	Spfa();

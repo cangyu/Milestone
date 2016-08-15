@@ -170,8 +170,6 @@ void TestErase()
 
 int main()
 {
-	//freopen("./TestingResults/list/list_basic.out", "w", stdout);
-
 	TestInteger();
 	TestMatrix();
 	TestBint();

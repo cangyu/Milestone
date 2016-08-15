@@ -30,12 +30,6 @@ private:
 			prev = next = this;
 		}
 
-		node(node *_prev, node *_next, const T &_data) :
-			prev(_prev), 
-			next(_next),
-			data(_data)
-		{}
-
 		node(const node &rhs) :data(rhs.data)
 		{
 			prev = next = this;

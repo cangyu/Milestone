@@ -6,6 +6,9 @@
 #include <queue>
 #include <utility>
 #include <cstring>
+#include <functional>
+
+#include "../../include/list.hpp"
 
 #include "../../include/list.hpp"
 
@@ -54,7 +57,7 @@ void Dijkstra(int start)
 		q.pop();
 		int x = top.second;
 		if(flag[x]) continue;
-		for(std::list<Edge>::iterator it = to[x].begin(); it != to[x].end(); ++it)
+		for(sjtu::list<Edge>::iterator it = to[x].begin(); it != to[x].end(); ++it)
 		{
 			if(it -> w + d[x] < d[it -> v])
 			{

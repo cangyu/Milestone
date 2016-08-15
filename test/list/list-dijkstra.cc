@@ -7,6 +7,8 @@
 #include <utility>
 #include <cstring>
 
+#include "../../include/list.hpp"
+
 std::default_random_engine myRandom(32421);
 
 const int n = 1000 + 5;
@@ -20,7 +22,7 @@ struct Edge {
 	Edge(const Edge &other) : v(other.v), w(other.w) {}
 };
 
-std::list<Edge> to[n];
+sjtu::list<Edge> to[n];
 bool flag[n] = {0};
 int d[n] = {0};
 

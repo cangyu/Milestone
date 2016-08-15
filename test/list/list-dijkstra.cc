@@ -6,6 +6,9 @@
 #include <queue>
 #include <utility>
 #include <cstring>
+#include <functional>
+
+#include "../../include/list.hpp"
 
 std::default_random_engine myRandom(32421);
 
@@ -20,7 +23,7 @@ struct Edge {
 	Edge(const Edge &other) : v(other.v), w(other.w) {}
 };
 
-std::list<Edge> to[n];
+sjtu::list<Edge> to[n];
 bool flag[n] = {0};
 int d[n] = {0};
 
@@ -52,7 +55,7 @@ void Dijkstra(int start)
 		q.pop();
 		int x = top.second;
 		if(flag[x]) continue;
-		for(std::list<Edge>::iterator it = to[x].begin(); it != to[x].end(); ++it)
+		for(sjtu::list<Edge>::iterator it = to[x].begin(); it != to[x].end(); ++it)
 		{
 			if(it -> w + d[x] < d[it -> v])
 			{

@@ -23,6 +23,7 @@ long long randNum(long long x,long long maxNum)
 	x = (x * 10007) % maxNum;
 	return x + 1; 
 } 
+
 void TestInteger()
 {
 	std::cout << "Test for classes without default constructor..." << std::endl;
@@ -181,5 +182,6 @@ int main()
 	TestDFS<TypeA<Util::Bint>>(0, 100, TypeA<Util::Bint>());
 	TestErase();
 	std :: cout << "Okay" << endl;
+
 	return 0;
 }

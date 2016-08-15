@@ -9,99 +9,129 @@
 
 namespace sjtu 
 {
-
+//a container like std::list
 template<typename T>
 class list
 {
-public:
-	//The elementry component of a list
-	typedef struct node
-	{
-		node *prev, *next;
-		T *data;
-
-		//Constructors
-		node(node *_prev = nullptr, node *_next = nullptr, T *_data = nullptr) :prev(_prev), next(_next), data(_data) {}
-		node(node* _prev, node *_next, const T &_data) :prev(_prev), next(_next)//可否直接new？
-		{
-			data = (T*)malloc(sizeof(T));
-			new (data) T(_data);
-		}
-
-		//Destructor
-		~node()
-		{
-			prev = next = nullptr;
-			if (!data)
-			{
-				data->~T();
-				free(data);
-			}
-			data = nullptr;
-		}
-
-	}NodeTypeDef, *pNodeTypeDef;
-
 private:
-	pNodeTypeDef last;
+	//list中的节点
+	//不论是默认构造还是拷贝构造或是赋值，
+	//均不拷贝对方的指针，只拷贝data，并保持指针指向自己
+	class node
+	{
+		friend class list<T>;
+
+	public:
+		node *prev, *next;
+		T data;
+
+		node() :data()
+		{
+			prev = next = this;
+		}
+
+		node(const T &_data) :data(_data)
+		{
+			prev = next = this;
+		}
+
+		node(node *_prev, node *_next, const T &_data) :
+			prev(_prev), 
+			next(_next),
+			data(_data)
+		{}
+
+		node(const node &rhs) :data(rhs.data)
+		{
+			prev = next = this;
+		}
+
+		node& operator=(node rhs)
+		{
+			exchange(rhs);
+			return *this;
+		}
+
+		~node() = default;
+
+	private:
+		void exchange(node &rhs)
+		{
+			std::swap(data, rhs.data);
+		}
+
+		//given node a,b
+		//insert a before b
+		static void insert_single(node *a, node *b)
+		{
+			b->prev->next = a;
+			a->next = b;
+			a->prev = b->prev;
+			b->prev = a;
+		}
+
+		//link node a and b
+		//a<->b
+		static void link(node *a, node *b)
+		{
+			a->next = b;
+			b->prev = a;
+		}
+	};
+
+	node *last;
 	size_t elemCnt;
 
-	void swap(list &rhs)
+	void exchange(list &rhs)
 	{
-		using std::swap;
-		swap(last, rhs.last);
-		swap(elemCnt, rhs.elemCnt);
+		std::swap(last, rhs.last);
+		std::swap(elemCnt, rhs.elemCnt);
 	}
 
 public:
-	//Iterator that knows the bound
+	//iterator that knows the ascription
+	//由于list的插入删除不会引起其它的迭代器失效，
+	//所以不需要在list中引入额外的指示list的last信息
 	class const_iterator;
 	class iterator 
 	{			
-	private:
-		pNodeTypeDef cur;
-		pNodeTypeDef bound;
+		friend class const_iterator;
+		friend class list<T>;
 
-		void swap(iterator &rhs)
+	private:
+		list<T> *ascription;
+		node *cur;
+
+		void exchange(iterator &rhs)
 		{
-			using std::swap;
-			swap(cur, rhs.cur);
-			swap(bound, rhs.bound);
+			std::swap(ascription, rhs.ascription);
+			std::swap(cur, rhs.cur);
 		}
 
 	public:
-		//Constructors
-		iterator(pNodeTypeDef _cur = nullptr, pNodeTypeDef _bound = nullptr) : cur(_cur), bound(_bound) {}
-		iterator(const iterator &rhs) :cur(rhs.cur), bound(rhs.bound) {}
+		iterator(list<T> *_a = nullptr, node *_c = nullptr) : 
+			ascription(_a), 
+			cur(_c)
+		{}
+
+		iterator(const iterator &rhs) :
+			ascription(rhs.ascription), 
+			cur(rhs.cur)
+		{}
+
+		~iterator() = default;
 		
-		//assignment operator,using the copy-on-swap strategy
 		iterator& operator=(iterator rhs)
 		{
-			this->swap(rhs);
+			exchange(rhs);
 			return *this;
 		}
 		
-		//Self-Check
-		bool isValid() const
-		{
-			pNodeTypeDef tmp = cur->next;
-			while (tmp && tmp != cur)
-			{
-				if (tmp == bound)
-					return true;
-				tmp = tmp->next;
-			}
-			return false;
-		}
-
-		//Check if this iterator belongs to certain list
-		bool checkBelonging(pNodeTypeDef out) const { return bound == out; }
-
 		//iter++
 		iterator operator++(int) 
 		{
 			iterator tmp(*this);
-			cur = cur->next;
+			++*this;
 			return tmp;
 		}
 
@@ -116,7 +146,7 @@ public:
 		iterator operator--(int) 
 		{
 			iterator tmp(*this);
-			cur = cur->prev;
+			--*this;
 			return tmp;
 		}
 
@@ -128,80 +158,116 @@ public:
 		}
 
 		//*iter
-		T& operator*() const { return *(cur->data); }
+		T& operator*() const 
+		{ 
+			return cur->data;
+		}
 		
 		//iter->
-		T* operator->() const { return cur->data; }
-
-		/**
-		 * a operator to check whether two iterators are same (pointing to the same memory).
-		 */
-		bool operator==(const iterator &rhs) const { return cur == rhs.cur; }
-		bool operator==(const const_iterator &rhs) const { return cur == rhs.cur; }
-		
-		/**
-		 * some other operator for iterator.
-		 */
-		bool operator!=(const iterator &rhs) const { return !operator==(rhs); }
-		bool operator!=(const const_iterator &rhs) const { return !operator==(rhs); }
-
-		//link two iterator to avoid repetiton
-		static void link(iterator &lhs, iterator &rhs)
-		{
-			lhs.cur->next = rhs.cur;
-			rhs.cur->prev = lhs.cur;
+		T* operator->() const 
+		{ 
+			return &(operator*()); 
 		}
 
-		//release the data memory
-		void release() { cur->~node(); }
+		//check whether two iterators are same (pointing to the same memory).
+		bool operator==(const iterator &rhs) const 
+		{ 
+			if (!ascription || !rhs.ascription || ascription != rhs.ascription)
+				return false;
+			else if (!cur || !rhs.cur || cur != rhs.cur)
+				return false;
+			else
+				return true;
+		}
+		
+		bool operator==(const const_iterator &rhs) const 
+		{ 
+			if (!ascription || !rhs.ascription || ascription != rhs.ascription)
+				return false;
+			else if (!cur || !rhs.cur || cur != rhs.cur)
+				return false;
+			else
+				return true;
+		}
+		
+		bool operator!=(const iterator &rhs) const 
+		{ 
+			return !operator==(rhs); 
+		}
+		
+		bool operator!=(const const_iterator &rhs) const 
+		{ 
+			return !operator==(rhs);
+		}
+
+		//self check
+		bool isValid(void *id) const
+		{
+			if (!id || (void *)ascription != id || !ascription->last)
+				return false;
+
+			node *p = ascription->last;
+			do {
+				if (cur == p)
+					return true;
+				else
+					p = p->next;
+			} while (p != ascription->last);
+
+			return false;
+		}
 	};
 
 	//Same as iterator,but can't modify data through it
 	class const_iterator 
 	{
-	private:
-		pNodeTypeDef cur;
-		pNodeTypeDef bound;
+		friend class iterator;
+		friend class list<T>;
 
-		void swap(const_iterator &rhs)
+	private:
+		const list<T> *ascription;
+		const node *cur;
+
+		void exchange(iterator &rhs)
 		{
-			using std::swap;
-			swap(cur, rhs.cur);
-			swap(bound, rhs.bound);
+			std::swap(ascription, rhs.ascription);
+			std::swap(cur, rhs.cur);
 		}
 
 	public:
-		//Constructors
-		const_iterator(pNodeTypeDef _cur, pNodeTypeDef _bound) :cur(_cur), bound(_bound) {}
-		const_iterator(const const_iterator &rhs) :cur(rhs.cur), bound(rhs.bound) {}
-		
+		//default constructor
+		const_iterator(const list<T> *_a = nullptr, const node *_c = nullptr) :
+			ascription(_a),
+			cur(_c)
+		{}
+
+		//construct from iterator
+		const_iterator(const iterator &rhs) :
+			ascription(rhs.ascription),
+			cur(rhs.cur)
+		{}
+
+		//copy-constructor
+		const_iterator(const const_iterator &rhs) :
+			ascription(rhs.ascription),
+			cur(rhs.cur)
+		{}
+
+		//destructor
+		~const_iterator() = default;
+
+		//assignment operator
 		const_iterator& operator=(const_iterator rhs)
 		{
-			this->swap(rhs);
+			exchange(rhs);
 			return *this;
 		}
-
-		//Self-Check
-		bool isValid() const
-		{
-			pNodeTypeDef tmp = cur->next;
-			while (tmp && tmp != cur)
-			{
-				if (tmp == bound)
-					return true;
-				tmp = tmp->next;
-			}
-			return false;
-		}
-
-		//Check if this const_iterator belongs to certain list
-		bool checkBelonging(pNodeTypeDef out) const { return bound == out; }
 
 		//iter++
 		const_iterator operator++(int)
 		{
-			const_iterator tmp(*this);
-			cur = cur->next;
+			iterator tmp(*this);
+			++*this;
 			return tmp;
 		}
 
@@ -216,7 +282,7 @@ public:
 		const_iterator operator--(int)
 		{
 			const_iterator tmp(*this);
-			cur = cur->prev;
+			--*this;
 			return tmp;
 		}
 
@@ -228,50 +294,88 @@ public:
 		}
 
 		//*iter
-		T operator*() const { return *(cur->data); }
-
-		//iter->
-		T* operator->() const { return cur->data; }
-
-		/**
-		* a operator to check whether two iterators are same (pointing to the same memory).
-		*/
-		bool operator==(const iterator &rhs) const { return cur == rhs.cur; }
-		bool operator==(const const_iterator &rhs) const { return cur == rhs.cur; }
-		/**
-		* some other operator for iterator.
-		*/
-		bool operator!=(const iterator &rhs) const { return !operator==(rhs); }
-		bool operator!=(const const_iterator &rhs) const { return !operator==(rhs); }
-
-		//link two iterator to avoid repetiton
-		static void link(const_iterator &lhs, const_iterator &rhs)
+		const T& operator*() const
 		{
-			lhs.cur->next = rhs.cur;
-			rhs.cur->prev = lhs.cur;
+			return cur->data;
 		}
 
-		//release the data memory
-		void release() { cur->~node(); }
+		//iter->
+		const T* operator->() const
+		{
+			return &(operator*());
+		}
+
+		//check whether two iterators are same (pointing to the same memory).
+		bool operator==(const iterator &rhs) const
+		{
+			if (!ascription || !rhs.ascription || ascription != rhs.ascription)
+				return false;
+			else if (!cur || !rhs.cur || cur != rhs.cur)
+				return false;
+			else
+				return true;
+		}
+
+		bool operator==(const const_iterator &rhs) const
+		{
+			if (!ascription || !rhs.ascription || ascription != rhs.ascription)
+				return false;
+			else if (!cur || !rhs.cur || cur != rhs.cur)
+				return false;
+			else
+				return true;
+		}
+
+		bool operator!=(const iterator &rhs) const
+		{
+			return !operator==(rhs);
+		}
+
+		bool operator!=(const const_iterator &rhs) const
+		{
+			return !operator==(rhs);
+		}
+
+		//self check
+		bool isValid(void *id) const
+		{
+			if (!id || (void *)ascription != id || !ascription->last)
+				return false;
+
+			node *p = ascription->last;
+			do {
+				if (cur == p)
+					return true;
+				else
+					p = p->next;
+			} while (p != ascription->last);
+
+			return false;
+		}
 	};
 	
-	//Constructors
-	list() :elemCnt(0)
+	//Constructor
+	list() :
+		elemCnt(0),
+		last((node *)std::malloc(sizeof(node)))
 	{
-		last = (pNodeTypeDef)malloc(sizeof(NodeTypeDef));
-		new (last) NodeTypeDef(last, last, nullptr);
+		last->prev = last->next = last;
 	}
-	list(const list &other)
-	{
-		last = (pNodeTypeDef)malloc(sizeof(NodeTypeDef));
-		new (last) NodeTypeDef(last, last, nullptr);
-		elemCnt = 0;//在随后的push_back操作中会自动加上
 
-		iterator tmp(other.begin()), tail(other.end());
-		while (tmp != tail)
+	list(const list &rhs):
+		elemCnt(rhs.elemCnt),
+		last((node *)std::malloc(sizeof(node)))
+	{
+		last->prev = last->next = last;
+
+		node *p = nullptr;
+		node *t = rhs.last->next;
+		
+		while (t != rhs.last)
 		{
-			push_back(*tmp);
-			++tmp;
+			p = new node(*t);			
+			node::insert_single(p, last);
+			t = t->next;
 		}
 	}
 
@@ -282,163 +386,169 @@ public:
 		free(last);
 	}
 
-	/**
-	 * assignment operator
-	 */
+	//assignment operator
 	list &operator=(list rhs) 
 	{
-		this->swap(rhs);
+		exchange(rhs);
 		return *this;
 	}
 
-	/**
-	 * access the first element
-	 * throw container_is_empty when it is empty.
-	 */
-	const T & front() const 
+	//access the first element
+	//throw container_is_empty when it is empty
+	const T& front() const 
 	{
-		if (size() == 0)
+		if (elemCnt == 0)
 			throw container_is_empty();
 		
-		return *(last->next->data);
+		return last->next->data;
 	}
 
-	/**
-	 * access the last element
-	 * throw container_is_empty when it is empty.
-	 */
-	const T & back() const 
+	//access the last element
+	//throw container_is_empty when it is empty
+	const T& back() const 
 	{
-		if (size() == 0)
+		if (elemCnt == 0)
 			throw container_is_empty();
 
-		return *(last->prev->data);
+		return last->prev->data;
 	}
 
-	/**
-	 * returns an iterator to the beginning.
-	 */
-	iterator begin() const { return iterator(last->next, last); }
-	const_iterator cbegin() const { return const_iterator(last->next, last); }
+	//returns an iterator to the beginning
+	iterator begin()
+	{ 
+		return iterator(this, last->next);
+	}
 
-	/**
-	 * returns an iterator to the end.
-	 */
-	iterator end() const { return iterator(last, last); }
-	const_iterator cend() const { return const_iterator(last, last); }
+	const_iterator cbegin() const
+	{ 
+		return const_iterator(this, last->next);
+	}
 
-	/**
-	 * checks whether the container is empty.
-	 */
-	bool empty() const { return elemCnt == 0; }
+	//returns an iterator to the end
+	iterator end()
+	{ 
+		return iterator(this, last);
+	}
 
-	/**
-	 * returns the number of elements.
-	 */
-	size_t size() const { return elemCnt; }
+	const_iterator cend() const 
+	{ 
+		return const_iterator(this, last); 
+	}
+
+	//checks whether the container is empty
+	bool empty() const 
+	{ 
+		return elemCnt == 0; 
+	}
+
+	//returns the number of elements
+	size_t size() const 
+	{ 
+		return elemCnt; 
+	}
 	
-	/**
-	 * clears the contents.
-	 */
-	void clear() { erase(begin(), end()); }
+	//clears the contents
+	void clear() 
+	{ 
+		node *p = last->next;
+		node *t = nullptr;
 
-	/**
-	 * inserts value before pos.
-	 * returns an iterator pointing to the insert value.
-	 */
+		while (p != last)
+		{
+			t = p;
+			p = p->next;
+			delete t;
+		}
+
+		elemCnt = 0;
+		last->prev = last->next = last;
+	}
+
+	//inserts value before pos
+	//returns an iterator pointing to the inserted value
 	iterator insert(iterator pos, const T &value) 
 	{
-		if (!pos.checkBelonging(last))
+		if (pos.ascription != this)
 			throw invalid_iterator();
 
-		pNodeTypeDef dataNode = new NodeTypeDef(nullptr, nullptr, value);
-		iterator curNode(dataNode, last), prev(pos);
-		--prev;
-		iterator::link(prev, curNode);
-		iterator::link(curNode, pos);
+		node *p = new node(value);
+		node::insert_single(p, pos.cur);
 		++elemCnt;
-		return curNode;
+
+		return iterator(this, p);
 	}
 
-	/**
-	 * removes the element at pos.
-	 * returns an iterator following the last removed element.
-	 * If there was anything wrong with the iterator, throw invalid_iterator.
-	 * If the iterator pos refers to the last element, the end() iterator is returned.
-	 */
+	//removes the element at pos.
+	//returns an iterator following the last removed element.
+	//If there was anything wrong with the iterator, throw invalid_iterator.
+	//If the iterator pos refers to the last element, the end() iterator is returned.
 	iterator erase(iterator pos) 
 	{
-		if (pos == end() || !pos.checkBelonging(last))//attention should be paid to check if the given iterator is within this list!
+		if (pos.ascription != this || pos.cur == last)
 			throw invalid_iterator();
 
-		iterator prev(pos), next(pos);
-		--prev;
-		++next;
-		iterator::link(prev, next);
-		pos.release();
+		node::link(pos.cur->prev, pos.cur->next);
+		node *p = pos.cur->next;
+		delete pos.cur;
 		--elemCnt;
-		return next;
+
+		return iterator(this, p);
 	}
 
-	/**
-	 * removes the elements in range [first, last).
-	 * returns an iterator following the last removed element.
-	 * If there was anything wrong with these iterators, throw invalid_iterator.
-	 * In this case, return last.
-	 */
-	iterator erase(iterator first, iterator last) 
+	//removes the elements in range [first, last).
+	//returns an iterator following the last removed element.
+	//If there was anything wrong with these iterators, throw invalid_iterator.
+	//In this case, return last.
+	iterator erase(iterator _first, iterator _last) 
 	{
-		if (!rangeCheck(first, last))//what's the rule for judgement? not across?
+		//check ascription
+		if (_first.ascription != this || _last.ascription != this || !_first.cur || !_last.cur)
 			throw invalid_iterator();
 
-		iterator prev(first), cur(first);
-		--prev;
-		size_t num = 0;
-		while (cur != last)
+		//check range
+		node *start = _first.cur, *finish = _last.cur, *t = nullptr;
+		for (t = start; t != finish; t = t->next)
+			if (!t || t == last)
+				throw invalid_iterator();
+		
+		//splice
+		node::link(start->prev, finish);
+		
+		//remove
+		size_t eraseCnt = 0;
+		while (start != finish)
 		{
-			iterator tmp(cur++);
-			tmp.release();
-			++num;
+			t = start;
+			start = start->next;
+			delete t;
 		}
-		elemCnt -= num;
-		iterator::link(prev, last);
-		return last;
+		elemCnt -= eraseCnt;
+
+		return iterator(this, finish);
 	}
 
-	/**
-	 * adds an element to the end
-	 */
-	void push_back(const T &value) { insert(end(), value); }
+	//adds an element to the end
+	void push_back(const T &value) 
+	{ 
+		insert(end(), value); 
+	}
 	
-	/**
-	 * removes the last element.
-	 */
-	void pop_back() { erase(--end()); }
+	//removes the last element
+	void pop_back() 
+	{ 
+		erase(--end());
+	}
 
-	/**
-	 * adds an element to the beginning
-	 */
-	void push_front(const T &value) { insert(begin(), value); }
+	//adds an element to the beginning
+	void push_front(const T &value)
+	{ 
+		insert(begin(), value);
+	}
 	
-	/**
-	 * removes the first element.
-	 */
-	void pop_front() { erase(begin()); }
-
-	bool rangeCheck(const iterator &lhs, const iterator &rhs) const
-	{
-		if (!lhs.checkBelonging(last) || !rhs.checkBelonging(last))
-			return false;
-
-		iterator tmp(lhs), tail(end());
-		while (tmp != rhs)//要求区间不横跨last
-		{
-			if (tmp == tail)
-				return false;
-			++tmp;
-		}
-
-		return true;
+	//removes the first element
+	void pop_front() 
+	{ 
+		erase(begin()); 
 	}
 };
 

@@ -10,8 +10,6 @@
 
 #include "../../include/list.hpp"
 
-#include "../../include/list.hpp"
-
 std::default_random_engine myRandom(32421);
 
 const int n = 1000 + 5;

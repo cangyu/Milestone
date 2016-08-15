@@ -1,9 +1,9 @@
 //provided by Chen Xinhao and Songyu Ke
-#include "class-integer.hpp"
-#include "class-matrix.hpp"
-#include "class-bint.hpp"
+#include "../common/class-integer.hpp"
+#include "../common/class-matrix.hpp"
+#include "../common/class-bint.hpp"
 
-#include "list.hpp"
+#include "../../include/list.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -170,7 +170,7 @@ void TestErase()
 
 int main()
 {
-	freopen("./TestingResults/list/list_basic.out", "w", stdout);
+	//freopen("./TestingResults/list/list_basic.out", "w", stdout);
 
 	TestInteger();
 	TestMatrix();

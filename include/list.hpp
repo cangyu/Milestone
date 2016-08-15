@@ -25,11 +25,6 @@ private:
 		node *prev, *next;
 		T data;
 
-		node() :data()
-		{
-			prev = next = this;
-		}
-
 		node(const T &_data) :data(_data)
 		{
 			prev = next = this;
@@ -60,8 +55,7 @@ private:
 			std::swap(data, rhs.data);
 		}
 
-		//given node a,b
-		//insert a before b
+		//given node a and b, insert a before b
 		static void insert_single(node *a, node *b)
 		{
 			b->prev->next = a;
@@ -70,8 +64,7 @@ private:
 			b->prev = a;
 		}
 
-		//link node a and b
-		//a<->b
+		//link node a and b in the form of a<->b
 		static void link(node *a, node *b)
 		{
 			a->next = b;
@@ -218,7 +211,7 @@ public:
 		}
 	};
 
-	//Same as iterator,but can't modify data through it
+	//Same as iterator, but can't modify data through it
 	class const_iterator 
 	{
 		friend class iterator;
@@ -362,7 +355,7 @@ public:
 		last->prev = last->next = last;
 	}
 
-	list(const list &rhs):
+	list(const list &rhs) :
 		elemCnt(rhs.elemCnt),
 		last((node *)std::malloc(sizeof(node)))
 	{
@@ -370,10 +363,10 @@ public:
 
 		node *p = nullptr;
 		node *t = rhs.last->next;
-		
+
 		while (t != rhs.last)
 		{
-			p = new node(*t);			
+			p = new node(*t);
 			node::insert_single(p, last);
 			t = t->next;
 		}
@@ -397,7 +390,7 @@ public:
 	//throw container_is_empty when it is empty
 	const T& front() const 
 	{
-		if (elemCnt == 0)
+		if (size() == 0)
 			throw container_is_empty();
 		
 		return last->next->data;
@@ -407,7 +400,7 @@ public:
 	//throw container_is_empty when it is empty
 	const T& back() const 
 	{
-		if (elemCnt == 0)
+		if (size() == 0)
 			throw container_is_empty();
 
 		return last->prev->data;
@@ -438,7 +431,7 @@ public:
 	//checks whether the container is empty
 	bool empty() const 
 	{ 
-		return elemCnt == 0; 
+		return size() == 0; 
 	}
 
 	//returns the number of elements
@@ -521,6 +514,7 @@ public:
 			t = start;
 			start = start->next;
 			delete t;
+			++eraseCnt;
 		}
 		elemCnt -= eraseCnt;
 

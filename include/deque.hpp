@@ -17,12 +17,26 @@ class deque
 private:
 	class node
 	{
-	public:
+		friend class deque<T>;
+
+	private:
 		node *prev, *next;
 		T *start, *left;
 		size_t totalLen, validLen;
 
+		void exchange(node &rhs)
+		{
+			std::swap(prev, rhs.prev);
+			std::swap(next, rhs.next);
+			std::swap(start, rhs.start);
+			std::swap(left, rhs.left);
+			std::swap(totalLen, rhs.totalLen);
+			std::swap(validLen, rhs.validLen);
+		}
+
+	public:
 		//默认构造，不分配空间
+		//前后指针都指向自己
 		node() :
 			prev(this),
 			next(this),
@@ -46,12 +60,18 @@ private:
 				left = start = (T *)std::malloc(_len * sizeof(T));
 		}
 
+		//析构函数
+		//注意：只在start不为nullptr时才能free
 		~node()
 		{
-			for (auto i = 0; i < validLen; i++)
-				(left + i)->~T();
+			if (start)
+			{
+				for (auto i = 0; i < validLen; i++)
+					(left + i)->~T();
 
-			std::free(start);
+				std::free(start);
+			}
+
 			start = left = nullptr;
 			totalLen = validLen = 0;
 		}
@@ -68,20 +88,28 @@ private:
 			if (validLen > 0)
 			{
 				left = start = (T *)std::malloc(validLen * sizeof(T));
-				for (int i = 0; i < validLen; i++)
+				for (auto i = 0; i < validLen; i++)
 					new (start + i) T(*(rhs.left + i));
 			}
 		}
 
+		//赋值，copy-on-swap
 		node& operator=(node rhs)
 		{
 			exchange(rhs);
 			return *this;
 		}
 
-		T* getBackPtr() const
+		//左部分可用空间
+		size_t leftAvailableCnt() const
 		{
-			return left ? left + validLen - 1 : nullptr;
+			return left ? left - start : 0;
+		}
+
+		//右部分可用空间
+		size_t rightAvailableCnt() const
+		{
+			return left ? totalLen - leftAvailableCnt() - validLen : 0;
 		}
 
 		bool leftAvailable() const
@@ -94,38 +122,30 @@ private:
 			return rightAvailableCnt() != 0;
 		}
 
-	private:
-		void exchange(node &rhs)
+		//可用空间的最后一个位置的指针
+		T* getBackPtr() const
 		{
-			std::swap(prev, rhs.prev);
-			std::swap(next, rhs.next);
-			std::swap(start, rhs.start);
-			std::swap(left, rhs.left);
-			std::swap(totalLen, rhs.totalLen);
-			std::swap(validLen, rhs.validLen);
+			return left ? left + validLen - 1 : nullptr;
 		}
 
-		//头部可用空间
-		size_t leftAvailableCnt() const
+		//在b之前插入a
+		static void insert(node *a, node *b)
 		{
-			return left ? left - start : 0;
-		}
-
-		//尾部可用空间
-		size_t rightAvailableCnt() const
-		{
-			return left ? totalLen - leftAvailableCnt() - validLen : 0;
+			a->next = b;
+			b->prev->next = a;
+			a->prev = b->prev;
+			b->prev = a;
 		}
 	};
 
 	size_t elemCnt;
-	node *head;
+	node *last;
 	bool *needMaintain;
 
 	void exchange(deque &rhs)
 	{
 		std::swap(elemCnt, rhs.elemCnt);
-		std::swap(head, rhs.head);
+		std::swap(last, rhs.last);
 		std::swap(needMaintain, rhs.needMaintain);
 	}
 
@@ -137,36 +157,31 @@ public:
 		friend class deque<T>;
 
 	private:
+		deque<T> *ascription;
+		node *origin;
 		T *cur;
-		node *ascription, *origin;
 
 		void exchange(iterator &rhs)
 		{
-			std::swap(cur, rhs.cur);
 			std::swap(ascription, rhs.ascription);
 			std::swap(origin, rhs.origin);
+			std::swap(cur, rhs.cur);
 		}
 
 	public:
-		iterator() :
-			cur(nullptr), 
-			ascription(nullptr), 
-			origin(nullptr) 
-		{}
-
-		iterator(T *_cur, node *_a, node *_ori) :
-			cur(_cur), 
-			ascription(_a), 
-			origin(_ori) 
+		iterator(deque<T> *_a = nullptr, node *_ori = nullptr, T *_cur = nullptr) :
+			ascription(_a),
+			origin(_ori),
+			cur(_cur)
 		{}
 
 		iterator(const iterator &rhs) :
-			cur(rhs.cur), 
 			ascription(rhs.ascription), 
-			origin(rhs.origin) 
+			origin(rhs.origin),
+			cur(rhs.cur)
 		{}
 
-		~iterator() {}
+		~iterator() = default;
 		
 		iterator& operator=(iterator rhs)
 		{
@@ -174,42 +189,45 @@ public:
 			return *this;
 		}
 
+		// return the distance between two iterator,
+		// if these two iterators point to different deque, throw invaild_iterator.
+		int operator-(const iterator &rhs) const
+		{
+			if (ascription != rhs.ascription)
+				throw invalid_iterator();
+
+			return getIndex() - rhs.getIndex();
+		}
+
+		//迭代器前后移动
 		iterator operator+(int n) const
 		{
-			iterator tmp = *this;
+			iterator tmp(*this);
 			return tmp += n;
 		}
 		
 		iterator operator-(int n) const
 		{
-			iterator tmp = *this;
+			iterator tmp(*this);
 			return tmp -= n;
 		}
 
-		// return the distance between two iterator,
-		// if these two iterators point to different deque, throw invaild_iterator.
-		int operator-(const iterator &rhs) const 
-		{
-			if (origin != rhs.origin)
-				throw invalid_iterator();
-
-			return rhs.getIndex() - getIndex();
-		}
-
-		//从当前位置移动n个step,n可以是任意整数。
-		//若n=0，则原样返回，不论该迭代器合法与否；
-		//若n>0，从当前位置开始向后移动n步：
-		//	如果当前位置是end()或移动超出了end(),则throw invalid_iterator()；
 		//若n<0，从当前位置开始向前移动n步：
 		//	如果当前位置是begin()或移动超出了begin(),则throw invalid_iterator()；
 		//	如果当前位置是end()且origin指向的deque非空,则向前移动一步将到达尾端元素。
 		iterator& operator+=(int n)
 		{
-			if (n > 0)
+			if (n == 0)
+				return *this;
+			else if (n < 0)
+				return operator-=(-n);
+			else
 			{
-				if(!cur)//只有指向end()的iterator的cur才可能是nullptr
+				//Syntax:向后移动n个有效step，若在移动过程中遇到end(),则throw invalid_iterator()
+
+				if (!cur)//只有指向end()的iterator的cur才可能是nullptr
 					throw invalid_iterator();
-				
+
 				int curRemainCnt = ascription->validLen - (cur - ascription->left) - 1;//本node内剩余的可从当前位置前进的步数
 
 				if (n <= curRemainCnt)//虽然curRemainCnt有可能为-1，但是这在下面的else中是相容的
@@ -218,67 +236,70 @@ public:
 				{
 					//移到下一个node的第一个元素
 					node *p = ascription->next;
-					n-=(curRemainCnt+1);//隐式地处理了curRemainCnt==-1的情况
-					
-					//继续move，n表示还要前进的步数
-					while (p!=origin && n >= p->validLen)
+					n -= (curRemainCnt + 1);//隐式地处理了curRemainCnt==-1的情况
+
+											//继续move，n表示还要前进的步数
+					while (p != origin && n >= p->validLen)
 					{
 						n -= p->validLen;
 						p = p->next;
 					}
 
 					//check是否移动到了end()
-					if(p==origin)
+					if (p == origin)
 					{
-						if(n>0)
+						if (n>0)
 							throw invalid_iterator();
 						else
-							cur=p->left;//nullptr只能用作比较，不能加0
+							cur = p->left;//nullptr只能用作比较，不能加0
 					}
 					else
 						cur = p->left + n;
 
 					ascription = p;
 				}
+				return *this;
 			}
-			else if (n<0)
+		}
+		
+		iterator& operator-=(int n)
+		{
+			if (n == 0)
+				return *this;
+			else if (n < 0)
+				return operator+=(-n);
+			else
 			{
-				n = -n;
-				int frontLeftCnt = cur ? cur-ascription->left : 0;//若所指向的是end()，则cur必为nullptr
-				
+				int frontLeftCnt = cur ? cur - ascription->left : 0;//若所指向的是end()，则cur必为nullptr
+
 				if (n <= frontLeftCnt)
 					cur -= n;
 				else
 				{
 					n -= frontLeftCnt;
 					node *p = ascription->prev;
-					while (p!=origin && n > p->validLen)
+					while (p != origin && n > p->validLen)
 					{
 						n -= p->validLen;
 						p = p->prev;
 					}
-					
+
 					//若在向前的过程中遇到了end(),则必然非法！
 					//包含了从begin()开始和deque为空的情况
-					if(p==origin)
+					if (p == origin)
 						throw invalid_iterator();
 
 					cur = p->left + p->validLen - n;
 					ascription = p;
 				}
-			}
 
-			return *this;
-		}
-		
-		iterator& operator-=(int n)
-		{
-			return *this += -n;
+				return *this;
+			}
 		}
 
 		iterator operator++(int)
 		{
-			iterator tmp = *this;
+			iterator tmp(*this);
 			++*this;
 			return tmp;
 		}
@@ -291,7 +312,7 @@ public:
 		
 		iterator operator--(int)
 		{
-			iterator tmp = *this;
+			iterator tmp(*this);
 			--*this;
 			return tmp;
 		}
@@ -302,7 +323,7 @@ public:
 			return *this;
 		}
 
-		//key character of an iterator
+		//key utilities of an iterator
 		T& operator*() const 
 		{ 
 			return *cur;
@@ -639,15 +660,25 @@ public:
 
 	deque() :
 		elemCnt(0),
-		head(new node()),
+		last(new node()),
 		needMaintain(new bool(true))
 	{}
 
 	deque(const deque &rhs) :
 		elemCnt(rhs.elemCnt), 
-		head(deepCopy(rhs)), 
+		last(new node()),
 		needMaintain(new bool(true))
 	{
+		//deep copy
+		//只拷贝包含数据元素的node
+		for (node *p = rhs.last->next; p != rhs.last; p = p->next)
+		{
+			if (p->validLen != 0)
+				node::insert(new node(*p), last);
+		}
+
+		//整理，不改变needMaintain标识，
+		//防止有后续的push_front or push_back
 		maintain();
 	}
 
@@ -714,6 +745,7 @@ public:
 	{ 
 		return elemCnt == 0 ? end() : find(0);
 	}
+
 	const_iterator cbegin() const
 	{ 
 		return elemCnt == 0 ? cend() : find(0);
@@ -724,6 +756,7 @@ public:
 	{ 
 		return iterator(nullptr, head, head); 
 	}
+
 	const_iterator cend() const
 	{ 
 		return const_iterator(nullptr, head, head);
@@ -742,16 +775,17 @@ public:
 	}
 
     //release all the nodes, as well as the contents inside
+	//also, relink the prev and next pointer of last to itself
 	void clear()
 	{
-		node *p = head->next;
-		node *t = nullptr;
-		while (p != head)
+		node *p = last->next, *t = nullptr;
+		while (p != last)
 		{
-			t = p->next;
-			delete p;
-			p = t;
+			t = p;
+			p = p->next;
+			delete t;
 		}
+		last->prev = last->next = last;
 	}
 
 	//inserts value before pos
@@ -949,16 +983,19 @@ public:
 	{
 		insert(end(),value);
 	}
+
 	void pop_back()
 	{
 		erase(--end());
 	}
+
 	void push_front(const T &value)
 	{
 		//避免不必要的maintain
 		iterator tmp(head->next->left, head->next, head);
 		insert(tmp, value);
 	}
+
 	void pop_front()
 	{
 		erase(begin());
@@ -988,9 +1025,12 @@ private:
 	iterator find(size_t index) const
 	{
 		if (*needMaintain)
+		{
 			maintain();
+			*needMaintain = false;
+		}
 
-		node *p = head->next;
+		node *p = last->next;
 		while (index >= p->validLen)
 		{
 			index -= p->validLen;
@@ -1050,28 +1090,6 @@ private:
 			p = q;
 			curCnt = 0;
 		}
-
-		*needMaintain = false;
-	}
-
-	//深拷贝一个deque
-	node* deepCopy(const deque& rhs) const
-	{
-		node *curHead = new node();
-
-		node *p = rhs.head->next;
-
-		while (p != rhs.head)
-		{
-			if (p->validLen != 0)
-			{
-				node *tmp = new node(*p);
-				insert_before(curHead, tmp);
-			}
-			p = p->next;
-		}
-
-		return curHead;
 	}
 };
 

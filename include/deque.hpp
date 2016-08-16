@@ -3,6 +3,7 @@
 
 #include "exceptions.hpp"
 
+#include <cstdlib>
 #include <cstddef>
 #include <cstring>
 #include <cmath>
@@ -21,48 +22,58 @@ private:
 		T *start, *left;
 		size_t totalLen, validLen;
 
+		//默认构造，不分配空间
 		node() :
+			prev(this),
+			next(this),
 			start(nullptr), 
 			left(nullptr), 
 			totalLen(0),
 			validLen(0)
-		{
-			prev = next = this;
-		}
+		{}
 
+		//带参数构造，只分配内存，不初始化
+		//注意：虽然malloc的参数可以为0，但是尽量避免
 		node(size_t _len) :
-			//start((T*)::operator new[](_len * sizeof(T))),
-			start((T*)std::malloc(_len * sizeof(T))),
+			prev(this),
+			next(this),
+			start(nullptr),
+			left(nullptr),
 			totalLen(_len),
 			validLen(0)
 		{
-			prev = next = this;
-			left = start;
+			if (_len > 0)
+				left = start = (T *)std::malloc(_len * sizeof(T));
 		}
 
 		~node()
 		{
-			//delete[] start;
+			for (auto i = 0; i < validLen; i++)
+				(left + i)->~T();
+
 			std::free(start);
 			start = left = nullptr;
 			totalLen = validLen = 0;
 		}
 
+		//拷贝构造，只复制有效的部分
 		node(const node &rhs) :
+			prev(this),
+			next(this),
+			start(nullptr),
+			left(nullptr),
 			totalLen(rhs.validLen),
-			validLen(rhs.validLen),
-			//start((T*)::operator new[](rhs.validLen * sizeof(T)))
-			start((T*)std::malloc(rhs.validLen * sizeof(T)))
+			validLen(rhs.validLen)
 		{
-			prev = next = this;
-
-			for (int i = 0; i < validLen; i++)
-				new (start + i) T(*(rhs.left + i));
-
-			left = start;
+			if (validLen > 0)
+			{
+				left = start = (T *)std::malloc(validLen * sizeof(T));
+				for (int i = 0; i < validLen; i++)
+					new (start + i) T(*(rhs.left + i));
+			}
 		}
 
-		node &operator=(node rhs)
+		node& operator=(node rhs)
 		{
 			exchange(rhs);
 			return *this;
@@ -163,13 +174,13 @@ public:
 			return *this;
 		}
 
-		iterator operator+(const int &n) const
+		iterator operator+(int n) const
 		{
 			iterator tmp = *this;
 			return tmp += n;
 		}
 		
-		iterator operator-(const int &n) const
+		iterator operator-(int n) const
 		{
 			iterator tmp = *this;
 			return tmp -= n;
@@ -422,14 +433,14 @@ public:
 			return *this;
 		}
 
-		const_iterator operator+(const int &n) const
+		const_iterator operator+(int n) const
 		{
-			const_iterator tmp = *this;
+			const_iterator tmp(*this);
 			return tmp += n;
 		}
-		const_iterator operator-(const int &n) const
+		const_iterator operator-(int n) const
 		{
-			const_iterator tmp = *this;
+			const_iterator tmp(*this);
 			return tmp -= n;
 		}
 
@@ -444,7 +455,7 @@ public:
 		}
 		
 		//move n steps
-		const_iterator& operator+=(const int &n)
+		const_iterator& operator+=(int n)
 		{
 			if (n > 0)
 			{
@@ -511,7 +522,7 @@ public:
 
 			return *this;
 		}
-		const_iterator& operator-=(const int &n)
+		const_iterator& operator-=(int n)
 		{
 			return *this += -n;
 		}

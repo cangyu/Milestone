@@ -11,10 +11,9 @@
 
 namespace sjtu
 {
-//类似于std::deque,但实现方式不同
-//基于块状链表实现，采用惰性插入的方法，
-//insert和erase不会触发对每个node大小的动态调整,
-//只有在access的时候才可能调整每个node的容量到sqrt(n),
+//类似于std::deque,但基于块状链表实现，采用惰性插入的方法
+//insert和erase不会触发对每个node大小的动态调整
+//只有在access的时候才可能调整每个node的容量到sqrt(n)
 //并且这种调整只会在第一次access进行，以后的access不用再重新整理
 //这样insert、erase的均摊复杂度为O(1)
 template<class T>
@@ -140,6 +139,15 @@ private:
 			a->next = b;
 			b->prev->next = a;
 			a->prev = b->prev;
+			b->prev = a;
+		}
+
+		//在a之后插入b
+		static void insert_after(node *a, node *b)
+		{
+			b->next = a->next;
+			a->next->prev = b;
+			a->next = b;
 			b->prev = a;
 		}
 	};
@@ -360,15 +368,15 @@ public:
 		bool isValid(void *id) const
 		{
 			//检查ascription是否一致
-			if (!id)
+			if (!id || id != ascription) 
 				return false;
-			node *terminal = ((deque<T> *)id)->last;
-			if (!terminal || terminal != origin)
-				return false;
-
-			//检测origin存在性
+			
+			//OK, they now point to the same deque.
+			//检测origin是否存在
+			node *terminal = ascription->last;
 			node *p = terminal;
 			bool exist = false;
+
 			do {
 				if (p == origin)
 				{
@@ -380,15 +388,16 @@ public:
 			if (!exist)
 				return false;
 
+			//OK, the node that origin pointing to exists.
 			//检测cur范围是否valid
 			if (cur == nullptr)
-				return origin->left == nullptr;
+				return origin->left == nullptr;//可以是end()
 			else if (origin->left == nullptr)
 				return false;
 			else
 			{
-				int dist = cur - terminal->last;
-				return 0 <= dist && dist < origin->validLen;
+				int dist = cur - origin->left;
+				return dist >= 0 && dist < origin->validLen;
 			}
 		}
 
@@ -430,7 +439,7 @@ public:
 
 	public:
 		//constructor
-		const_iterator(deque<T> *_a = nullptr, node *_ori = nullptr, T *_cur = nullptr) :
+		const_iterator(const deque<T> *_a = nullptr, node *_ori = nullptr, T *_cur = nullptr) :
 			ascription(_a),
 			origin(_ori),
 			cur(_cur)
@@ -620,15 +629,15 @@ public:
 		bool isValid(void *id) const
 		{
 			//检查ascription是否一致
-			if (!id)
-				return false;
-			node *terminal = ((deque<T> *)id)->last;
-			if (!terminal || terminal != origin)
+			if (!id || id != ascription)
 				return false;
 
-			//检测origin存在性
+			//OK, they now point to the same deque.
+			//检测origin是否存在
+			node *terminal = ascription->last;
 			node *p = terminal;
 			bool exist = false;
+
 			do {
 				if (p == origin)
 				{
@@ -640,15 +649,16 @@ public:
 			if (!exist)
 				return false;
 
+			//OK, the node that origin pointing to exists.
 			//检测cur范围是否valid
 			if (cur == nullptr)
-				return origin->left == nullptr;
+				return origin->left == nullptr;//可以是end()
 			else if (origin->left == nullptr)
 				return false;
 			else
 			{
-				int dist = cur - terminal->last;
-				return 0 <= dist && dist < origin->validLen;
+				int dist = cur - origin->left;
+				return dist >= 0 && dist < origin->validLen;
 			}
 		}
 
@@ -698,7 +708,7 @@ public:
 	~deque()
 	{
 		clear();
-		delete head;
+		delete last;
 		delete needMaintain;
 	}
 
@@ -709,20 +719,22 @@ public:
 	}
 
 	//access specified element with bounds checking
-	T& at(const size_t &pos)
+	T& at(size_t pos)
 	{
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
 
-		return *(find(pos));
+		node *p = find(pos);
+		return *(p->left + pos);
 	}
     
-	const T& at(const size_t &pos) const
+	const T& at(size_t pos) const
 	{
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
 
-		return *(find(pos));
+		node *p = find(pos);
+		return *(p->left + pos);
 	}
     
 	T& operator[](const size_t &pos)
@@ -756,12 +768,26 @@ public:
 	//iterator to the beginning
 	iterator begin()
 	{ 
-		return elemCnt == 0 ? end() : find(0);
+		if (empty())
+			return end();
+		else
+		{
+			size_t target = 0;
+			node *p = find(target);
+			return iterator(this, p, p->left + target);
+		}
 	}
 
 	const_iterator cbegin() const
 	{ 
-		return elemCnt == 0 ? cend() : find(0);
+		if (empty())
+			return cend();
+		else
+		{
+			size_t target = 0;
+			node *p = find(target);
+			return const_iterator(this, p, p->left + target);
+		}
 	}
 
 	//iterator to the end
@@ -799,14 +825,15 @@ public:
 			delete t;
 		}
 		last->prev = last->next = last;
+		elemCnt = 0;
 	}
 
 	//inserts value before pos
 	iterator insert(iterator pos, const T &value)
 	{
-		if (!pos.isValid(head))
+		if (!pos.isValid(this))
 			throw invalid_iterator();
-
+		
 		++elemCnt;
 
 		if (pos == end())
@@ -815,120 +842,124 @@ public:
 			new (tmp->left) T(value);
 			++tmp->validLen;
 
-			insert_before(head, tmp);
+			node::insert(tmp, last);
 			*needMaintain = true;
 
-			return iterator(tmp->left, tmp, head);
+			return iterator(this, tmp, tmp->left);
 		}
-		else
+		else if (pos.origin->validLen < pos.origin->totalLen)//当前node有空余
 		{
-			if (pos.ascription->validLen < pos.ascription->totalLen)//当前node有空余
+			size_t leftMoveCnt = pos.cur - pos.origin->left;//[left,pos)之间元素个数
+			size_t rightMoveCnt = pos.origin->validLen - leftMoveCnt;//[pos,left+validLen)之间元素个数
+			size_t leftEmptyCnt = pos.origin->left - pos.origin->start;//左边空余的数量
+			size_t rightEmptyCnt = pos.origin->totalLen - leftEmptyCnt - pos.origin->validLen;//右边空余的数量
+			bool moveToLeft = leftEmptyCnt == 0 ? false : (rightMoveCnt == 0 ? true : leftMoveCnt <= rightMoveCnt);//确定移动方向
+
+			//move elements
+			if (moveToLeft)
 			{
-				//[left,pos)之间元素个数
-				size_t leftMoveCnt = pos.cur - pos.ascription->left;
-				//[pos,left+validLen)之间元素个数
-				size_t rightMoveCnt = pos.ascription->validLen - leftMoveCnt;
+				T *dstStart = pos.origin->left - 1;
+				T *srcStart = dstStart + 1;
 
-				//左边空余的数量
-				size_t leftEmptyCnt = pos.ascription->left - pos.ascription->start;
-				//右边空余的数量
-				size_t rightEmptyCnt = pos.ascription->totalLen - leftEmptyCnt - pos.ascription->validLen;
-
-				//确定移动方向
-				bool moveToLeft = leftEmptyCnt == 0 ? false : (rightMoveCnt == 0 ? true : leftMoveCnt <= rightMoveCnt);
-
-				//move elements
-				if (moveToLeft)
+				for (auto i = 0; i < leftMoveCnt; i++)
 				{
-					std::memmove(pos.ascription->left - 1, pos.ascription->left, leftMoveCnt * sizeof(T));
-					--pos.ascription->left;
-					--pos.cur;
+					new (dstStart + i) T(*(srcStart + i));
+					(srcStart + i)->~T();
 				}
-				else
-					std::memmove(pos.cur + 1, pos.cur, rightMoveCnt * sizeof(T));
 
-				//insert new value
-				*pos.cur = value;
-				++pos.ascription->validLen;
-
-				//返回指向新插入元素的iterator
-				return pos;
+				--pos.origin->left;
+				--pos.cur;
 			}
-			else//当前node已满
+			else
 			{
-				if (pos.cur == pos.ascription->left && pos.ascription->prev->rightAvailable())//插在头部且前一个node的尾部有空余
-				{
-					//插在前一个node的尾部
-					node *p = pos.ascription->prev;
-					*(p->left + p->validLen) = value;
-					++p->validLen;
+				T *dstStart = pos.origin->left + pos.origin->validLen;
+				T *srcStart = dstStart - 1;
 
-					//返回指向前一个node尾部元素的iterator
-					return iterator(p->left + p->validLen - 1, p, head);
+				for (auto i = 0; i < rightMoveCnt; i++)
+				{
+					new (dstStart - i) T(*(srcStart - i));
+					(srcStart - i)->~T();
 				}
-				else if (pos.cur == pos.ascription->getBackPtr() && pos.ascription->next->leftAvailable())//插在尾部且后一个node的头部有空余
-				{
-					//插在后一个node的头部
-					node *p = pos.ascription->next;
-					*(--p->left) = value;
-					++p->validLen;
+			}
 
-					//返回指向下一个node头部元素的iterator
-					return iterator(p->left, p, head);
+			//insert new value
+			new (pos.cur) T(value);
+			++pos.origin->validLen;
+			return pos;
+		}
+		else//当前node已满
+		{
+			if (pos.cur == pos.origin->left && pos.origin->prev->rightAvailable())//插在头部且前一个node的尾部有空余
+			{
+				//插在前一个node的尾部
+				node *p = pos.origin->prev;
+				new (p->left + p->validLen) T(value);
+				++p->validLen;
+
+				//返回指向前一个node尾部元素的iterator
+				return iterator(this, p, p->left + p->validLen - 1);
+			}
+			else if (pos.cur == pos.origin->getBackPtr() && pos.origin->next->leftAvailable())//插在尾部且后一个node的头部有空余
+			{
+				//插在后一个node的头部
+				node *p = pos.origin->next;
+				--p->left;
+				new (p->left) T(value);
+				++p->validLen;
+
+				//返回指向下一个node头部元素的iterator
+				return iterator(this, p, p->left);
+			}
+			else//split
+			{
+				node *p = pos.origin;
+				*needMaintain = true;
+
+				size_t leftMoveCnt = pos.cur - p->left;//[left,pos)之间元素个数
+				size_t rightMoveCnt = p->validLen - leftMoveCnt;//[pos,left+validLen)之间元素个数
+				size_t leftAllocCnt = leftMoveCnt + 1;
+				size_t rightAllocCnt = rightMoveCnt;
+
+				if (leftMoveCnt <= rightMoveCnt)//左半部分元素较少
+				{
+					node *tmp = new node(leftAllocCnt);
+					node::insert(tmp, p);
+
+					//拷贝[left,pos)的原有数据
+					for (int i = 0; i < leftMoveCnt; i++)
+						new (tmp->left + i) T(*(p->left + i));
+
+					//insert value
+					tmp->validLen = leftAllocCnt;
+					new (tmp->left + tmp->validLen - 1) T(value);
+
+					//修正原node
+					for (auto i = 0; i < leftMoveCnt; i++)
+						(p->left + i)->~T();
+					p->left = pos.cur;
+					p->validLen -= leftMoveCnt;
+
+					return iterator(this, tmp, tmp->getBackPtr());
 				}
-				else//split
+				else//右半部分元素较少
 				{
-					node *p = pos.ascription;
-					*needMaintain = true;
+					node *tmp = new node(rightAllocCnt);
+					node::insert_after(p, tmp);
 
-					//[left,pos]之间元素个数
-					size_t leftMoveCnt = pos.cur - p->left + 1;
-					//[pos,left+validLen)之间元素个数
-					size_t rightMoveCnt = p->validLen - leftMoveCnt + 1;
+					//拷贝[pos,left+validCnt)
+					for (auto i = 0; i < rightMoveCnt; i++)
+						new (tmp->left + i) T(*(pos.cur + i));
+					tmp->validLen = rightAllocCnt;
 
-					if (leftMoveCnt <= rightMoveCnt)//左半部分元素较少
-					{
-						//[left,pos]
-						node *tmp = new node(leftMoveCnt);
+					//清理
+					for (auto i = 0; i < rightMoveCnt; i++)
+						(pos.cur + i)->~T();
 
-						//拷贝[left,pos)的原有数据
-						for (int i = 0; i < leftMoveCnt - 1; i++)
-							new (tmp->left + i) T(*(p->left + i));
+					//insert
+					new (pos.cur) T(value);
+					p->validLen -= (rightMoveCnt - 1);
 
-						//insert value
-						tmp->validLen = leftMoveCnt;
-						new (tmp->left + tmp->validLen - 1) T(value);
-
-						//修正原node
-						p->left = pos.cur;
-						p->validLen -= (leftMoveCnt - 1);
-
-						//将新的node链入原node之前
-						insert_before(p, tmp);
-
-						//返回指向新插入的value的iterator，即tmp的尾部
-						return iterator(tmp->getBackPtr(), tmp, head);
-					}
-					else//右半部分元素较少，move them
-					{
-						//[pos,left+validCnt)
-						node *tmp = new node(rightMoveCnt);
-
-						//拷贝[pos,left+validCnt)
-						for (int i = 0; i < rightMoveCnt; i++)
-							new (tmp->left + i) T(*(pos.cur + i));
-						tmp->validLen = rightMoveCnt;
-
-						//insert value
-						*pos.cur = value;
-						p->validLen -= (rightMoveCnt - 1);
-
-						//将新的node链入原node之后
-						insert_after(p, tmp);
-
-						//返回指向新插入的value的iterator，即pos自身
-						return pos;
-					}
+					return pos;
 				}
 			}
 		}
@@ -937,26 +968,29 @@ public:
 	//removes specified element at pos
 	iterator erase(iterator pos)
 	{
-		if (empty() || !pos.isValid(head) || pos == end())
+		if (empty() || !pos.isValid(this) || pos == end())
 			throw invalid_iterator();
 
 		--elemCnt;
-		if (pos.cur == pos.ascription->left + (pos.ascription->validLen - 1))//pos指向当前node的最后一个，此时元素个数>=1
+		node *p = pos.origin;
+
+		if (pos.cur == p->getBackPtr())//pos指向当前node的最后一个，此时元素个数>=1
 		{
-			--pos.ascription->validLen;
+			--p->validLen;
+			(p->left + p->validLen)->~T();
 
 			//找到下一个不为空的node
-			node *p = pos.ascription->next;
-			while (p != head && p->validLen == 0)
-				p = p->next;
+			node *t = p->next;
+			while (t != last && t->validLen == 0)
+				t = t->next;
 
-			//返回该node的第一个元素，若deque中只有一个元素，p将回到head，即end()
-			return iterator(p->left, p, head);
+			return iterator(this, t, t->left);
 		}
-		else if (pos.cur == pos.ascription->left)//pos指向当前node的第一个，此时元素个数>=2
+		else if (pos.cur == p->left)//pos指向当前node的第一个，此时元素个数>=2
 		{
-			++pos.ascription->left;
-			--pos.ascription->validLen;
+			p->left->~T();
+			++p->left;
+			--p->validLen;
 
 			//由于不会出现validLen==0的情况，直接返回指向下一个pos的iterator
 			++pos.cur;
@@ -964,15 +998,23 @@ public:
 		}
 		else//pos指向当前node的非头尾元素，此时元素个数>=3
 		{
-			//pos之前的元素个数
-			size_t numToMove = pos.cur - pos.ascription->left;
+			size_t numToMove = pos.cur - p->left;//pos之前的元素个数
 
-			if (2 * numToMove < pos.ascription->validLen)//前半部分元素少于一半
+			if (2 * numToMove <= p->validLen)//前半部分元素少于一半
 			{
 				//[left,pos)之间的元素向后move一个单位
-				std::memmove(pos.ascription->left + 1, pos.ascription->left, numToMove * sizeof(T));
-				++pos.ascription->left;
-				--pos.ascription->validLen;
+				T *dstStart = pos.cur;
+				T *srcStart = dstStart - 1;
+
+				for (auto i = 0; i < numToMove; i++)
+				{
+					(dstStart - i)->~T();
+					new (dstStart - i) T(*(srcStart - i));
+				}
+				p->left->~T();
+
+				++p->left;
+				--p->validLen;
 
 				//返回指向pos后面的元素的iterator
 				++pos.cur;
@@ -981,9 +1023,19 @@ public:
 			else
 			{
 				//[pos+1,left+validLen)之间的元素向前move一个单位
-				numToMove = pos.ascription->validLen - numToMove - 1;
-				std::memmove(pos.cur, pos.cur + 1, numToMove * sizeof(T));
-				--pos.ascription->validLen;
+				numToMove = p->validLen - numToMove - 1;
+
+				T *dstStart = pos.cur;
+				T *srcStart = dstStart + 1;
+
+				for (auto i = 0; i < numToMove; i++)
+				{
+					(dstStart + i)->~T();
+					new (dstStart + i) T(*(srcStart + i));
+				}
+
+				--p->validLen;
+				(p->left + p->validLen)->~T();
 
 				//新的元素替代了pos上原来的元素，直接返回
 				return pos;
@@ -994,7 +1046,12 @@ public:
 	//头尾操作
 	void push_back(const T &value)
 	{
-		insert(end(),value);
+		node *tmp = new node(1);
+		new (tmp->left) T(value);
+		++tmp->validLen;
+		node::insert(tmp, last);
+		++elemCnt;
+		*needMaintain = true;
 	}
 
 	void pop_back()
@@ -1004,8 +1061,12 @@ public:
 
 	void push_front(const T &value)
 	{
-		//避免不必要的maintain
-		insert(iterator(this, last->next, last->next->left), value);
+		node *tmp = new node(1);
+		new (tmp->left) T(value);
+		++tmp->validLen;
+		node::insert_after(last, tmp);
+		++elemCnt;
+		*needMaintain = true;
 	}
 
 	void pop_front()
@@ -1016,8 +1077,8 @@ public:
 
 private:
 	//根据下标返回iterator
-	//确保index合法！
-	iterator find(size_t index) const
+	//要确保index合法！
+	node* find(size_t &index) const
 	{
 		if (*needMaintain)
 		{
@@ -1032,21 +1093,21 @@ private:
 			p = p->next;
 		}
 
-		return iterator(p->left + index, p, head);
+		return p;
 	}
 
 	//将链表中较短的node合并
 	void maintain() const
 	{
-		const size_t sn = std::sqrt(elemCnt);
+		const size_t sn = (size_t)std::ceil(std::sqrt(elemCnt));
 
-		node *p = head->next, *q = head->next, *r = head;
+		node *p = last->next, *q = last->next, *r = last;
 		size_t curCnt = 0;
 
-		while (p != head)
+		while (p != last)
 		{
 			//找到本次终结点
-			while (q != head && curCnt + q->validLen <= sn)
+			while (q != last && curCnt + q->validLen <= sn)
 			{
 				curCnt += q->validLen;
 				q = q->next;

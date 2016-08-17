@@ -445,8 +445,6 @@ bool nomercyTest() {
 
 int main() 
 {
-	//freopen("map_advance1.out", "w", stdout);
-
     bool (*testFunc[])()= {
         pushTest, popTest, insertTest, iteratorTest,
         eraseTest, copyAndClearTest, memoryTest,

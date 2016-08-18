@@ -12,11 +12,6 @@ namespace sjtu
 /**
  * a container whose behavior is similar to a queue.
  * It should be based on the list you had written before.
- * It should be based on the list you had written before.
- * It should be based on the list you had written before.
- * 重要的事情要说三遍：请调用自己写的list来实现
- * 重要的事情要说三遍：请调用自己写的list来实现
- * 重要的事情要说三遍：请调用自己写的list来实现
  */
 template<typename T>
 class queue 
@@ -41,6 +36,7 @@ public:
 		container = (ContainerTypeDef*)malloc(sizeof(ContainerTypeDef));
 		new (container) ContainerTypeDef();
 	}
+
 	queue(const queue<T> &other) 
 	{
 		container = (ContainerTypeDef*)malloc(sizeof(ContainerTypeDef));
@@ -97,13 +93,19 @@ public:
 	/**
 	 * return the number of the elements.
 	 */
-	size_t size() const { return container->size(); }
+	size_t size() const 
+	{ 
+		return container->size(); 
+	}
 
 	/**
 	 * check if the container has at least an element.
 	 * @return true if it is empty, false if it has at least an element.
 	 */
-	bool empty() const { return container->empty(); }
+	bool empty() const 
+	{ 
+		return container->empty();
+	}
 };
 
 }

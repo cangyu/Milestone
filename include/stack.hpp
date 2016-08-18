@@ -2,6 +2,8 @@
 #define SJTU_STACK_HPP
 
 #include "vector.hpp"
+#include "list.hpp"
+#include "exceptions.hpp"
 
 #include <cstdlib>
 #include <algorithm>

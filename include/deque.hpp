@@ -222,6 +222,8 @@ public:
 
 				if (n != 0)//若遇到end()且不为终点，则invalid
 					throw invalid_iterator();
+				else
+					return *this;
 			}
 		}
 
@@ -282,9 +284,11 @@ public:
 			return *this;
 		}
 
-		//key utilities of an iterator
 		T& operator*() const
 		{
+			if (!cur)//防止通过end()来赋值
+				throw invalid_iterator();
+
 			return *cur;
 		}
 
@@ -480,6 +484,8 @@ public:
 				//若遇到end()且不为终点，则invalid
 				if (n != 0)
 					throw invalid_iterator();
+				else
+					return *this;
 			}
 		}
 
@@ -546,6 +552,9 @@ public:
 		//key utilities of an iterator
 		const T& operator*() const
 		{
+			if (!cur)
+				throw invalid_iterator();
+
 			return *cur;
 		}
 
@@ -652,16 +661,14 @@ public:
 		last(new node()),
 		needMaintain(new bool(false))
 	{
-		//deep copy
-		//只拷贝包含数据元素的node
+		//deep copy,只拷贝包含数据元素的node
 		for (node *p = rhs.last->next; p != rhs.last; p = p->next)
 		{
 			if (p->validLen != 0)
 				node::insert(new node(*p), last);
 		}
 
-		//整理，不改变needMaintain标识，
-		//防止有后续的push_front or push_back
+		//整理
 		maintain();
 	}
 
@@ -710,7 +717,7 @@ public:
 	//access the first element
 	const T& front() const
 	{
-		if (elemCnt == 0)
+		if (empty())
 			throw container_is_empty();
 
 		return *(cbegin());
@@ -719,7 +726,7 @@ public:
 	//access the last element
 	const T& back() const
 	{
-		if (elemCnt == 0)
+		if (empty())
 			throw container_is_empty();
 
 		return *(--cend());
@@ -764,7 +771,7 @@ public:
     //true if the container is empty
 	bool empty() const 
 	{ 
-		return elemCnt == 0; 
+		return size() == 0; 
 	}
 
     //number of elements in the container
@@ -901,7 +908,7 @@ public:
 		int leftMoveCnt = pos.cur - p->left;//[left,pos)之间的元素个数
 		int rightMoveCnt = p->validLen - leftMoveCnt - 1;//(pos,left+validLen)之间的元素个数
 
-		if (leftMoveCnt <= rightMoveCnt)//左边元素较少，[left,pos)之间的元素向后move一个单位
+		if (leftMoveCnt < rightMoveCnt)//左边元素较少，[left,pos)之间的元素向后move一个单位
 		{
 			T *dstStart = pos.cur;
 			T *srcStart = dstStart - 1;
@@ -913,26 +920,11 @@ public:
 			}
 			p->left->~T();
 
-			if(p->validLen>1)
-				++p->left;
-			
+			++p->left;			
 			--p->validLen;
 
-			int rightRemainCnt = p->validLen - (pos.cur - p->left) - 1;
-			if (rightRemainCnt >= 1)
-			{
-				++pos.cur;
-				return pos;
-			}
-			else
-			{
-				node *t = p->next;
-				while (t != last && t->validLen == 0)
-					t = t->next;
-
-				return iterator(this, t, t->left);
-			}
-
+			++pos.cur;
+			return pos;
 		}
 		else//右边元素较少，(pos,left+validLen)之间的元素向前move一个单位
 		{
@@ -947,6 +939,14 @@ public:
 
 			--p->validLen;
 			(p->left + p->validLen)->~T();
+
+			if (pos.cur == p->left + p->validLen)
+			{
+				do { p = p->next; } while (p != last && p->validLen == 0);
+				return iterator(this, p, p->left);
+			}
+			else
+				return pos;
 		}
 	}
 

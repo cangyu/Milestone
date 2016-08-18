@@ -2,7 +2,7 @@
 Course project for Data Structure.  
 Containers like ***vector, list, deque, stack, queue, priority\_queue, map*** and ***unordered\_map*** were implemented.  
 Also, some generic algorithms like ***sort, list\_sort*** and ***make\_heap*** were done at last.  
-All the code were checked using valgrind to ensure that there's no memory leak. Suggestions are welcom!
+All the code were checked with valgrind to ensure that there's no memory leak. Suggestions are welcome!
 
 ## Implementation details
 ###vector
@@ -18,5 +18,14 @@ All the code were checked using valgrind to ensure that there's no memory leak. 
 
 ###deque
 &emsp;The key parts of a list are the ___erase___ and ___insert___ functions.
+
+###stack
+&emsp;Actually, stack is an adapter instead of a container. It's based on the vector or list so that the ___push___, ___pop___ and ___top___ can be realized easily.  
+&emsp;Since the elements inside a stack are not allowed to be accessed, we don't have to provide relevant iterator.
+
+###queue
+&emsp;Similarly, queue is also an adapter instead of a container. As we need to support operations on the front, vector is not suitable any more. Thus, it was implemented with the list we created before. Operations like ___push___, ___pop___ and ___front___ can be done easily by calling their counterparts in list.  
+&emsp;Since the elements inside a queue are not premitted to be traversed, we needn't to provide relevant iterator.
+
 ## Declaration
 The framework of this project is based on the course project of DS2016, ACM Class, SJTU. I'm full of admiration for the wonderful work they've done!

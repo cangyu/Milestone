@@ -4,8 +4,8 @@
 #include <vector>
 #include <stack>
 
-#include "list.hpp"
-#include "stack.hpp"
+#include "../../include/list.hpp"
+#include "../../include/stack.hpp"
 
 std::default_random_engine myRandom(1021233);
 
@@ -65,8 +65,6 @@ void Spfa()
 
 int main()
 {
-	freopen("TestingResult_Stack_spfa.out", "w", stdout);
-
 	ConstructGraph();
 	Spfa();
 	for (int i = 1; i <= n; ++i) {

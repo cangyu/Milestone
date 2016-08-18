@@ -1,6 +1,7 @@
 #include <iostream>
 #include <queue>
-#include "queue.hpp"
+
+#include "../../include/queue.hpp"
 #include "../common/class-bint.hpp"
 
 sjtu::queue<int> queInt;
@@ -8,8 +9,6 @@ sjtu::queue<Util::Bint> queBint;
 
 int main()
 {
-	freopen("queue_basic.out", "w", stdout);
-
 	for (int i = 1; i <= 100; ++i) {
 		queInt.push(i);
 		queBint.push(Util::Bint(i));

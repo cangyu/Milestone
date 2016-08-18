@@ -4,8 +4,8 @@
 #include <vector>
 #include <queue>
 
-#include "list.hpp"
-#include "queue.hpp"
+#include "../../include/list.hpp"
+#include "../../include/queue.hpp"
 
 std::default_random_engine myRandom(1021233);
 
@@ -65,8 +65,6 @@ void Spfa()
 
 int main()
 {
-	freopen("queue_spfa.out", "w", stdout);
-
 	ConstructGraph();
 	Spfa();
 	for (int i = 1; i <= n; ++i) {

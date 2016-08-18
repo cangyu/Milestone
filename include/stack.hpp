@@ -21,35 +21,30 @@ private:
 
 	ListType *container;
 
-	void swap(stack &rhs) { std::swap(container, rhs.container); }
+	void swap(stack &rhs) 
+	{ 
+		std::swap(container, rhs.container);
+	}
 
 public:
-	/**
-	 *  constructors
-	 */
 	stack() 
 	{
 		container = (ListType*)malloc(sizeof(ListType));
 		new (container) ListType();
 	}
+
 	stack(const stack &other) 
 	{
 		container = (ListType*)malloc(sizeof(ListType));
 		new (container) ListType(*(other.container));
 	}
 
-	/**
-	 * deconstructor
-	 */
 	~stack()
 	{
 		container->~ListType();
 		free(container);
 	}
 
-	/**
-	 * Assignment operator
-	 */
 	stack &operator=(stack other) 
 	{
 		swap(other);
@@ -72,7 +67,10 @@ public:
 	/**
 	 * push new element to the stack.
 	 */
-	void push(const T &e) { container->push_back(e); }
+	void push(const T &e) 
+	{ 
+		container->push_back(e); 
+	}
 	
 	/**
 	 * delete the top element.
@@ -89,13 +87,19 @@ public:
 	/**
 	 * return the number of the elements.
 	 */
-	size_t size() const { return container->size(); }
+	size_t size() const 
+	{ 
+		return container->size(); 
+	}
 
 	/**
 	 * check if the container has at least an element.
 	 * @return true if it is empty, false if it has at least an element.
 	 */
-	bool empty() const { return container->empty(); }
+	bool empty() const 
+	{ 
+		return container->empty();
+	}
 };
 
 }

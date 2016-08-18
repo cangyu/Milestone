@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stack>
-#include "stack.hpp"
+#include "../../include/stack.hpp"
 #include "../common/class-bint.hpp"
 
 sjtu::stack<int> stackInt;
@@ -8,8 +8,6 @@ sjtu::stack<Util::Bint> stackBint;
 
 int main()
 {
-	freopen("TestingResult_Stack_basic.out", "w", stdout);
-
 	for (int i = 1; i <= 100; ++i) {
 		stackInt.push(i);
 		stackBint.push(Util::Bint(i));

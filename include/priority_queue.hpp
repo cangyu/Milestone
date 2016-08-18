@@ -11,79 +11,6 @@
 
 namespace sjtu 
 {
-//A container like std::priority_queue which is a heap internal.
-template<typename T, class Compare = std::less<T>, typename HeapTypeDef = binary_heap<T, Compare> >
-class priority_queue 
-{
-private:
-	HeapTypeDef *heap;
-
-	void swap(priority_queue &other) { std::swap(heap, other.heap); }
-
-public:
-	/**
-	 * constructors
-	 */
-	priority_queue():heap(new HeapTypeDef()) {}
-	priority_queue(const priority_queue &other) :heap(new HeapTypeDef(*(other.heap))) {}
-
-	/**
-	 * deconstructor
-	 */
-	~priority_queue() { delete heap; }
-
-	/**
-	 * Assignment operator
-	 */
-	priority_queue &operator=(const priority_queue &other) 
-	{
-		priority_queue tmp(other);
-		swap(tmp);
-		return *this;
-	}
-
-	/**
-	 * get the top of the queue.
-	 * @return a reference of the top element.
-	 * throw container_is_empty if empty() returns true;
-	 */
-	const T & top() const 
-	{
-		if (empty())
-			throw container_is_empty();
-
-		return heap->front();
-	}
-
-	/**
-	 * push new element to the priority queue.
-	 */
-	void push(const T &e) { heap->push_back(e); }
-	
-	/**
-	 * delete the top element.
-	 * throw container_is_empty if empty() returns true;
-	 */
-	void pop() 
-	{
-		if (empty())
-			throw container_is_empty();
-
-		heap->pop_front();
-	}
-
-	/**
-	 * return the number of the elements.
-	 */
-	size_t size() const { return heap->size(); }
-
-	/**
-	 * check if the container has at least an element.
-	 * @return true if it is empty, false if it has at least an element.
-	 */
-	bool empty() const { return heap->empty(); }
-};
-
 //A binary heap for the internal heap of a priority_queue.
 //The implementation is based on the vector implemented before.
 template<typename T, class Compare = std::less<T> >
@@ -507,6 +434,79 @@ private:
 			}
 		}
 	}
+};
+
+//A container like std::priority_queue which is a heap internal.
+template<typename T, class Compare = std::less<T>, typename HeapTypeDef = binary_heap<T, Compare> >
+class priority_queue
+{
+private:
+	HeapTypeDef *heap;
+
+	void swap(priority_queue &other) { std::swap(heap, other.heap); }
+
+public:
+	/**
+	* constructors
+	*/
+	priority_queue() :heap(new HeapTypeDef()) {}
+	priority_queue(const priority_queue &other) :heap(new HeapTypeDef(*(other.heap))) {}
+
+	/**
+	* deconstructor
+	*/
+	~priority_queue() { delete heap; }
+
+	/**
+	* Assignment operator
+	*/
+	priority_queue &operator=(const priority_queue &other)
+	{
+		priority_queue tmp(other);
+		swap(tmp);
+		return *this;
+	}
+
+	/**
+	* get the top of the queue.
+	* @return a reference of the top element.
+	* throw container_is_empty if empty() returns true;
+	*/
+	const T & top() const
+	{
+		if (empty())
+			throw container_is_empty();
+
+		return heap->front();
+	}
+
+	/**
+	* push new element to the priority queue.
+	*/
+	void push(const T &e) { heap->push_back(e); }
+
+	/**
+	* delete the top element.
+	* throw container_is_empty if empty() returns true;
+	*/
+	void pop()
+	{
+		if (empty())
+			throw container_is_empty();
+
+		heap->pop_front();
+	}
+
+	/**
+	* return the number of the elements.
+	*/
+	size_t size() const { return heap->size(); }
+
+	/**
+	* check if the container has at least an element.
+	* @return true if it is empty, false if it has at least an element.
+	*/
+	bool empty() const { return heap->empty(); }
 };
 }
 #endif

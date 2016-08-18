@@ -27,5 +27,10 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 &emsp;Similarly, queue is also an ___adapter___ instead of a container. As we need to support operations on the front, vector is not suitable any more. Thus, it was implemented with the ___list___ we created before. Operations like ___push___, ___pop___ and ___front___ can be done easily by calling their counterparts in list.  
 &emsp;Since the elements inside a queue are not premitted to be traversed, we needn't to provide relevant iterator.
 
+###priority_queue
+&emsp;Here I implemented the priority_queue with both ___binary heap___ and ___fibonacci heap___.  
+&emsp;Binary heap supports all the oridinary operations except the ___merge___ while fibonacci heap can do a good job on this.  
+
+
 ## Declaration
 The framework of this project is based on the course project of DS2016, ACM Class, SJTU. I'm full of admiration for the wonderful work they've done!

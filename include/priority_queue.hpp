@@ -437,7 +437,7 @@ private:
 };
 
 //A container like std::priority_queue which is a heap internal.
-template<typename T, class Compare = std::less<T>, typename HeapTypeDef = binary_heap<T, Compare> >
+template<typename T, class Compare = std::less<T>, typename HeapTypeDef = fibonacci_heap<T, Compare> >
 class priority_queue
 {
 private:

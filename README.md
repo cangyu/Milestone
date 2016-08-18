@@ -20,11 +20,11 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 &emsp;The key parts of a list are the ___erase___ and ___insert___ functions.
 
 ###stack
-&emsp;Actually, stack is an adapter instead of a container. It's based on the vector or list so that the ___push___, ___pop___ and ___top___ can be realized easily.  
+&emsp;Actually, stack is an ___adapter___ instead of a container. It's based on the ___vector___ or ___list___ so that the ___push___, ___pop___ and ___top___ can be realized easily by calling corresponding functions in specified container. Also, we needn't to worry about the memory management since it has been guaranteed before.  
 &emsp;Since the elements inside a stack are not allowed to be accessed, we don't have to provide relevant iterator.
 
 ###queue
-&emsp;Similarly, queue is also an adapter instead of a container. As we need to support operations on the front, vector is not suitable any more. Thus, it was implemented with the list we created before. Operations like ___push___, ___pop___ and ___front___ can be done easily by calling their counterparts in list.  
+&emsp;Similarly, queue is also an ___adapter___ instead of a container. As we need to support operations on the front, vector is not suitable any more. Thus, it was implemented with the ___list___ we created before. Operations like ___push___, ___pop___ and ___front___ can be done easily by calling their counterparts in list.  
 &emsp;Since the elements inside a queue are not premitted to be traversed, we needn't to provide relevant iterator.
 
 ## Declaration

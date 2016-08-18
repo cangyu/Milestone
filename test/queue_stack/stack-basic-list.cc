@@ -1,16 +1,15 @@
 #include <iostream>
 #include <stack>
-#include "stack.hpp"
+
 #include "../common/class-bint.hpp"
-#include "list.hpp"
+#include "../../include/stack.hpp"
+#include "../../include/list.hpp"
 
 sjtu::stack<int, sjtu::list<int>> stackInt;
 sjtu::stack<Util::Bint, sjtu::list<Util::Bint>> stackBint;
 
 int main()
 {
-	freopen("TestingResult_Stack_list.out", "w", stdout);
-
 	for (int i = 1; i <= 100; ++i) {
 		stackInt.push(i);
 		stackBint.push(Util::Bint(i));

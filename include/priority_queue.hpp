@@ -5,14 +5,14 @@
 #include <cstdlib>
 #include <cstddef>
 #include <functional>
-#include "exceptions.hpp"
 
+#include "exceptions.hpp"
 #include "vector.hpp"
 
 namespace sjtu 
 {
 //A container like std::priority_queue which is a heap internal.
-template<typename T, class Compare = std::less<T>, typename HeapTypeDef = fibonacci_heap<T, Compare> >
+template<typename T, class Compare = std::less<T>, typename HeapTypeDef = binary_heap<T, Compare> >
 class priority_queue 
 {
 private:
@@ -93,9 +93,9 @@ private:
 	sjtu::vector<T> c;
 	Compare cmp;
 
-	size_t parent(size_t i) const { return (i - 1) / 2; }
-	size_t left(size_t i) const { return 2 * i + 1; }
-	size_t right(size_t i) const { return 2 * i + 2; }
+	static size_t parent(size_t i) { return (i - 1) / 2; }
+	static size_t left(size_t i) { return 2 * i + 1; }
+	static size_t right(size_t i) { return 2 * i + 2; }
 
 	void percolateDown(size_t pos)
 	{

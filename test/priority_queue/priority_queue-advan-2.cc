@@ -10,6 +10,7 @@
 #include<iostream>
 #include<cctype>
 #include<utility>
+
 #include "../../include/priority_queue.hpp"
 
 void TestConstructorAndPush(){
@@ -208,9 +209,6 @@ void Testextra(){
 	std :: cout << std :: endl;
 }
 int main(){
-
-	freopen("priority_queue_binary_advance2.out", "w", stdout);
-
 	TestConstructorAndPush(); 
  	TestSize();
  	TestException();

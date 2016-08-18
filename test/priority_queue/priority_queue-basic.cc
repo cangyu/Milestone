@@ -53,8 +53,6 @@ void TestException()
 
 int main(int argc, char *const argv[])
 {
-	freopen("priority_queue_binary_basic.out", "w", stdout);
-
 	TestConstructorAndPush();
 	TestSize();
 	TestException();

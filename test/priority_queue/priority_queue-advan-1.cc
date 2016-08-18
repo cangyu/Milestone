@@ -1,5 +1,5 @@
 // provided by 林伟鸿
-//
+
 #include <iostream>
 #include <map>
 #include <ctime>
@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+
 #include "../../include/priority_queue.hpp"
 
 using namespace std;
@@ -224,9 +225,6 @@ bool check11(){
 
 
 int main(){
-
-	freopen("priority_queue_binary_advance1.out", "w", stdout);
-
 	check1();
     check2();
 	check3();

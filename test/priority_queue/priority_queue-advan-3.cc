@@ -1,4 +1,5 @@
 // provided by xzj
+
 #include <iostream>
 #include <queue>
 #include <ctime>
@@ -201,8 +202,6 @@ void exception_test()
 }
 int main(int argc, char *const argv[])
 {
-	freopen("priority_queue_binary_advance3.out", "w", stdout);
-
 	puts("Test Start");
 	normal_test();
 	normal_copy_test();	

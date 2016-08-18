@@ -30,7 +30,19 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 ###priority_queue
 &emsp;Here I implemented the priority_queue with both ___binary heap___ and ___fibonacci heap___.  
 &emsp;Binary heap supports all the oridinary operations except the ___merge___ while fibonacci heap can do a good job on this.  
+&emsp;For a binary heap, when the top element get extracted, a ___percolateDown___ process will be taken to select the new front element and to re-balance the heap. Similarly, a ___percolateUp___ process will be applied after a new element was appended to the back so that it can be properly placed. Both of these two operations have logarithmic complexity, so the time cost of the ___pop___ and ___push___ operations are ___O(log(n))___.  
+&emsp;Theoretically, the time consumption of the __pop___ operation for a fibonacci heap is ___O(log(n))___ and the ___push___ operation is ___O(1)___ since fibonacci heap adopts a "___lazy___" strategy to store new elements. That is, it simply inserts the element into its data list, when a new element comes, so the time consumption is constant. However, a ___consolidate___ process will be taken after the first element was poped, which effectively re-ordered the heap and takes logarithmic time complexity.  
+&emsp;Naturally, iterator is not needed for this data structure since the traversal of a heap is meaningless.
 
+###map
+
+###unordered_map
+
+###sort
+
+###list_sort
+
+###make_heap
 
 ## Declaration
 The framework of this project is based on the course project of DS2016, ACM Class, SJTU. I'm full of admiration for the wonderful work they've done!

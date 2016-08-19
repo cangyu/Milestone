@@ -256,17 +256,17 @@ namespace sjtu
 		{
 			friend class rb_tree<KeyTypeDef, ElemTypeDef, GetKeyFunc, Compare>;
 		private:
-			rb_node* node;
+			const rb_node* node;
 			const rb_tree* ascription;
             
-            void exchange(iterator &rhs)
+            void exchange(const_iterator &rhs)
             {
                 std::swap(node, rhs.node);
                 std::swap(ascription, rhs.ascription);
             }
 
 		public:
-			const_iterator(rb_node* _nPtr = nullptr, const rb_tree* _tPtr = nullptr) :
+			const_iterator(const rb_node* _nPtr = nullptr, const rb_tree* _tPtr = nullptr) :
                 node(_nPtr), 
                 ascription(_tPtr) 
             {}
@@ -318,6 +318,7 @@ namespace sjtu
 				decrement();
 				return *this;
 			}
+
 			const const_iterator& operator--()
 			{
 				decrement();
@@ -496,8 +497,7 @@ namespace sjtu
 			nodeCnt = 0;
 
 			header->parent = nullptr;
-			header->left = header;
-			header->right = header;
+			header->right = header->left = header;
 		}
 
 		iterator find(const KeyTypeDef& _key)
@@ -917,13 +917,15 @@ namespace sjtu
 		}
 
 	public:
-		map() :
-			bt(new BalanceTreeTypeDef()) 
-		{}
+		map() :bt((BalanceTreeTypeDef *)std::malloc(sizeof(BalanceTreeTypeDef)))
+		{
+			new (bt) BalanceTreeTypeDef();
+		}
 
-		map(const map &other):
-			bt(new BalanceTreeTypeDef(*other.bt))
-		{}
+		map(const map &other) :bt((BalanceTreeTypeDef *)std::malloc(sizeof(BalanceTreeTypeDef)))
+		{
+			new (bt) BalanceTreeTypeDef(*other.bt);
+		}
 
 		map& operator=(map tmp)
 		{
@@ -933,7 +935,8 @@ namespace sjtu
 
 		~map()
 		{
-			delete bt;
+			bt->~BalanceTreeTypeDef();
+			std::free(bt);
 			bt = nullptr;
 		}
 

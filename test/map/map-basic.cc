@@ -1,4 +1,5 @@
-#include "map.hpp"
+#include "../../include/map.hpp"
+
 #include <iostream>
 #include <cassert>
 #include <string>
@@ -8,7 +9,7 @@ public:
 	static int counter;
 	int val;
 	
-	Integer(int val=0) : val(val) {
+	Integer(int val) : val(val) {
 		counter++;
 	}
 
@@ -42,9 +43,6 @@ void tester(void) {
 	assert(map.empty() && map.size() == 0);
 	//	test: operator[], insert()
 	for (int i = 0; i < 100000; ++i) {
-
-		std::cerr << i << std::endl;
-
 		std::string string = "";
 		for (int number = i; number; number /= 10) {
 			char digit = '0' + number % 10;
@@ -116,10 +114,7 @@ void tester(void) {
 	std::cout << map.size() << std::endl;
 }
 
-int main(void) 
-{
-	freopen("map_basic.out", "w", stdout);
-
+int main(void) {
 	tester();
 	std::cout << Integer::counter << std::endl;
 }

@@ -14,7 +14,7 @@ class Key{
 public:
 	int x;
 	Key(const Key &other):x(other.x){}	
-	Key(int x=0):x(x){}
+	Key(int x):x(x){}
 	int num()const{
 		return x;	
 	}
@@ -231,8 +231,6 @@ void test_iterator()
 	}
 }
 int main(){
-	freopen("map_advance5.out", "w", stdout);
-
 	test_insert();
 	test_erase();
 	test_const_at();

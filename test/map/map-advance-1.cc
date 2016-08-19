@@ -505,8 +505,7 @@ void easy_test(){
 }
 
 int main(){
-	freopen("map_advance1.out", "w", stdout);
-	
+	//freopen("testans_advance.out", "w", stdout);
 	srand(time(NULL));
 	easy_test();
 	if(!check1()) cout << "Test 1 Failed..." << endl; else cout << "Test 1 Passed!" << endl;

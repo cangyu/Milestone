@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cstring>
 #include "map.hpp"
-
 long long aa=13131,bb=5353,MOD=(long long)(1e9+7),now=1;
 int rand()
 {
@@ -17,7 +16,7 @@ class Key{
 public:
 	int x;
 	Key(const Key &other):x(other.x){}	
-	Key(int x=0):x(x){}
+	Key(int x):x(x){}
 };
 class Data{
 public:
@@ -208,8 +207,6 @@ void test_copy()
 	puts("");
 }
 int main(){
-	freopen("map_advance2.out", "w", stdout);
-
 	test_insert();
 	test_erase();
 	test_const_at();

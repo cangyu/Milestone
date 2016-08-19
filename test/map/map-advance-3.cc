@@ -51,7 +51,7 @@ public:
 	static int counter;
 	int val;
 	
-	IntA(int val=0) : val(val) {
+	IntA(int val) : val(val) {
 		counter++;
 	}
 
@@ -604,8 +604,6 @@ void tester11() {
 }
 
 int main() {
-	freopen("map_advance3.out", "w", stdout);
-
 #ifdef SPECIAL
 	puts("AATree-Map Checker Version 1.2");
 #endif

@@ -8,15 +8,15 @@
 #include "utility.hpp"
 #include "exceptions.hpp"
 
-namespace sjtu 
+namespace sjtu
 {
-    //Internal balance tree for map.
+	//Internal balance tree for map.
 	template<typename KeyTypeDef, typename ElemTypeDef, class GetKeyFunc, class Compare>
 	class rb_tree
 	{
 	private:
 		typedef enum { RED = 0, BLACK = 1 } ColorTypeDef;
-        
+
 		struct rb_node
 		{
 			ElemTypeDef elem;
@@ -79,41 +79,41 @@ namespace sjtu
 		private:
 			rb_node* node;
 			rb_tree* ascription;
-            
-            void exchange(iterator &rhs)
-            {
-                std::swap(node, rhs.node);
-                std::swap(ascription, rhs.ascription);
-            }
+
+			void exchange(iterator &rhs)
+			{
+				std::swap(node, rhs.node);
+				std::swap(ascription, rhs.ascription);
+			}
 
 		public:
 			iterator(rb_node* _nPtr = nullptr, rb_tree* _tPtr = nullptr) :
-                node(_nPtr), 
-                ascription(_tPtr) 
-            {}
-            
+				node(_nPtr),
+				ascription(_tPtr)
+			{}
+
 			iterator(const iterator& rhs) :
-                node(rhs.node), 
-                ascription(rhs.ascription) 
-            {}
-            
-            iterator& operator=(iterator rhs)
-            {
-                exchange(rhs);
-                return *this;
-            }
-            
+				node(rhs.node),
+				ascription(rhs.ascription)
+			{}
+
+			iterator& operator=(iterator rhs)
+			{
+				exchange(rhs);
+				return *this;
+			}
+
 			~iterator() = default;
 
-			ElemTypeDef& operator*() const 
-            { 
-                return node->elem; 
-            }
-			
-            ElemTypeDef* operator->() const noexcept 
-            { 
-                return &(operator*()); 
-            }
+			ElemTypeDef& operator*() const
+			{
+				return node->elem;
+			}
+
+			ElemTypeDef* operator->() const noexcept
+			{
+				return &(operator*());
+			}
 
 			iterator operator++(int)
 			{
@@ -134,7 +134,7 @@ namespace sjtu
 				decrement();
 				return tmp;
 			}
-			
+
 			iterator& operator--()
 			{
 				decrement();
@@ -145,7 +145,7 @@ namespace sjtu
 			{
 				return ascription == rhs.ascription && node == rhs.node;
 			}
-            
+
 			bool operator==(const const_iterator &rhs) const
 			{
 				return ascription == rhs.ascription && node == rhs.node;
@@ -155,7 +155,7 @@ namespace sjtu
 			{
 				return !operator==(rhs);
 			}
-            
+
 			bool operator!=(const const_iterator &rhs) const
 			{
 				return !operator==(rhs);
@@ -165,7 +165,7 @@ namespace sjtu
 			{
 				return _id && _id == ascription;
 			}
-            
+
 			bool isValid() const
 			{
 				if (ascription == nullptr || node == nullptr)
@@ -211,7 +211,7 @@ namespace sjtu
 			//若iterator指向header，decrement后是最后一个rb_node
 			void decrement()
 			{
-				if(node==ascription->header->left)
+				if (node == ascription->header->left)
 					throw invalid_iterator();
 
 				if (node->color == RED && node->parent->parent == node)//node有可能指向header，因为header和root都具有经过两个连续的parent后指向自己的性质，还要用颜色来限定确保是header
@@ -243,46 +243,46 @@ namespace sjtu
 		private:
 			const rb_node* node;
 			const rb_tree* ascription;
-            
-            void exchange(const_iterator &rhs)
-            {
-                std::swap(node, rhs.node);
-                std::swap(ascription, rhs.ascription);
-            }
+
+			void exchange(const_iterator &rhs)
+			{
+				std::swap(node, rhs.node);
+				std::swap(ascription, rhs.ascription);
+			}
 
 		public:
 			const_iterator(const rb_node* _nPtr = nullptr, const rb_tree* _tPtr = nullptr) :
-                node(_nPtr), 
-                ascription(_tPtr) 
-            {}
-            
+				node(_nPtr),
+				ascription(_tPtr)
+			{}
+
 			const_iterator(const const_iterator& rhs) :
-                node(rhs.node), 
-                ascription(rhs.ascription) 
-            {}
-            
+				node(rhs.node),
+				ascription(rhs.ascription)
+			{}
+
 			const_iterator(const iterator& rhs) :
-                node(rhs.node), 
-                ascription(rhs.ascription) 
-            {}
-            
-            const_iterator& operator=(const_iterator rhs)
-            {
-                exchange(rhs);
-                return *this;
-            }
-            
+				node(rhs.node),
+				ascription(rhs.ascription)
+			{}
+
+			const_iterator& operator=(const_iterator rhs)
+			{
+				exchange(rhs);
+				return *this;
+			}
+
 			~const_iterator() = default;
 
-			const ElemTypeDef& operator*() const 
-            {   
-                return node->elem;
-            }
-			
-            const ElemTypeDef* operator->() const noexcept //返回得到的指针可以被修改，但是指针指向的内容不能被修改
-            { 
-                return &(operator*()); 
-            }
+			const ElemTypeDef& operator*() const
+			{
+				return node->elem;
+			}
+
+			const ElemTypeDef* operator->() const noexcept //返回得到的指针可以被修改，但是指针指向的内容不能被修改
+			{
+				return &(operator*());
+			}
 
 			const_iterator operator++(int)
 			{
@@ -290,7 +290,7 @@ namespace sjtu
 				increment();
 				return tmp;
 			}
-			
+
 			const const_iterator& operator++()
 			{
 				increment();
@@ -314,7 +314,7 @@ namespace sjtu
 			{
 				return ascription == rhs.ascription && node == rhs.node;
 			}
-            
+
 			bool operator==(const const_iterator &rhs) const
 			{
 				return ascription == rhs.ascription && node == rhs.node;
@@ -324,7 +324,7 @@ namespace sjtu
 			{
 				return !operator==(rhs);
 			}
-            
+
 			bool operator!=(const const_iterator &rhs) const
 			{
 				return !operator==(rhs);
@@ -334,7 +334,7 @@ namespace sjtu
 			{
 				return _id && _id == ascription;
 			}
-            
+
 			bool isValid() const
 			{
 				if (ascription == nullptr || node == nullptr)
@@ -373,7 +373,7 @@ namespace sjtu
 						node = y;
 				}
 			}
-            
+
 			void decrement()
 			{
 				if (node == ascription->header->left)
@@ -407,9 +407,9 @@ namespace sjtu
 			cmp(),
 			getKey()
 		{
-            header->parent=nullptr;
+			header->parent = nullptr;
 			header->right = header->left = header;
-            header->color=RED;
+			header->color = RED;
 		}
 
 		rb_tree(const rb_tree& rhs) :
@@ -418,10 +418,10 @@ namespace sjtu
 			cmp(rhs.cmp),
 			getKey(rhs.getKey)
 		{
-            header->parent=nullptr;
+			header->parent = nullptr;
 			header->right = header->left = header;
-            header->color=RED;
-            
+			header->color = RED;
+
 			header->parent = copyTree(rhs.header->parent);
 			if (nodeCnt)
 			{
@@ -440,8 +440,8 @@ namespace sjtu
 		~rb_tree()
 		{
 			clear();
-            
-            std::free(header);
+
+			std::free(header);
 			header = nullptr;
 		}
 
@@ -449,7 +449,7 @@ namespace sjtu
 		{
 			return iterator(header->left, this);
 		}
-        
+
 		const_iterator cbegin() const
 		{
 			return const_iterator(header->left, this);
@@ -459,7 +459,7 @@ namespace sjtu
 		{
 			return iterator(header, this);
 		}
-        
+
 		const_iterator cend() const
 		{
 			return const_iterator(header, this);
@@ -875,14 +875,14 @@ namespace sjtu
 	{
 	public:
 		typedef pair<const KeyTypeDef, ValTypeDef> value_type;
-	
+
 	private:
 		class _getKey
 		{
 		public:
 			const KeyTypeDef& operator() (const value_type& _elem) const
 			{
-				return _elem.first; 
+				return _elem.first;
 			}
 		};
 
@@ -956,16 +956,16 @@ namespace sjtu
 			const_iterator target = find(key);
 			if (target == cend())
 				throw index_out_of_bound();
-			
+
 			return target->second;
 		}
 
-		iterator begin() 
+		iterator begin()
 		{
 			return bt->begin();
 		}
-        
-		const_iterator cbegin() const 
+
+		const_iterator cbegin() const
 		{
 			return bt->cbegin();
 		}
@@ -974,9 +974,9 @@ namespace sjtu
 		{
 			return bt->end();
 		}
-        
+
 		const_iterator cend() const
-		{ 
+		{
 			return bt->cend();
 		}
 
@@ -986,7 +986,7 @@ namespace sjtu
 		}
 
 		size_t size() const
-		{ 
+		{
 			return bt->size();
 		}
 
@@ -997,20 +997,20 @@ namespace sjtu
 
 		size_t count(const KeyTypeDef &key) const
 		{
-			return find(key) != cend() ? 1 : 0; 
+			return find(key) != cend() ? 1 : 0;
 		}
 
 		iterator find(const KeyTypeDef& _key)
 		{
 			return bt->find(_key);
 		}
-        
+
 		const_iterator find(const KeyTypeDef& _key) const
 		{
 			return bt->find(_key);
 		}
 
-		pair<iterator, bool> insert(const value_type &_val) 
+		pair<iterator, bool> insert(const value_type &_val)
 		{
 			return bt->insert(_val);
 		}

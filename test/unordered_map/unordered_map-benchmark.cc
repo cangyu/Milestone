@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <chrono>
 #include <ctime>
-#include "unordered_map.hpp"
-#include "class-bint.hpp"
 
+#include "../../include/unordered_map.hpp"
+#include "../common/class-bint.hpp"
 
 std::default_random_engine randomEngine((unsigned)time(NULL));
 

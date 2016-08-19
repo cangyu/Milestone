@@ -932,6 +932,7 @@ namespace sjtu
 
 			return target->second;
 		}
+
 		const ValTypeDef& at(const KeyTypeDef &key) const
 		{
 			const_iterator target = find(key);
@@ -949,6 +950,7 @@ namespace sjtu
 
 			return target->second;
 		}
+
 		const ValTypeDef& operator[](const KeyTypeDef &key) const
 		{
 			const_iterator target = find(key);
@@ -1019,5 +1021,5 @@ namespace sjtu
 		}
 	};
 }
-
 #endif
+

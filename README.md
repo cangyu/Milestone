@@ -4,7 +4,7 @@ Containers like ***vector, list, deque, stack, queue, priority\_queue, map*** an
 Also, some generic algorithms like ***sort, list\_sort*** and ***make\_heap*** were done at last.  
 All the code were checked with valgrind to ensure that there's no memory leak. Suggestions are welcome!
 
-## Implementation description
+## Implementation Keypoints
 ###vector
 &emsp;The key parts of a vector are the ___erase___ and ___insert___ operations, whose time complexity are O(n).  
 &emsp;Attentation should be paid to the so called ___"deep copy"___ operations when moving the objects inside or using the assignment operator, since objects may have pointers pointing to dynamic memory outside the vector.  
@@ -34,6 +34,12 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 &emsp;Naturally, iterator is not needed for this data structure as the traversal of a heap is meaningless.
 
 ###map
+&emsp;Although there're many kinds of balance tree can be applied like Binary Tree, AVL, RB, AA, Splay, Treap, Skip List and so on, we use the famous ___Red-Black Tree___ as the internal infrastructure for map. It's important to clarify why we choose RB instead of ___AVL___, which is more balanced than RB.  
+&emsp;As we know, the mostly used operations of a map are ___insert___ and ___erase___. After a new node was inserted, the tree may get unbalanced, and the re-balance process will be taken. For both AVL and RB, it will take at most ***2*** times of ***rotation*** in the worst cases. Thus, the time complexity of the insert operation for a map is ___O(1)___.  
+&emsp;However, when it comes to the re-balance process for an erase operation, all the nodes ***along*** the path from root to the erased node will be maintained for AVL while RB needs at most ***3*** times of rotation. Thus, the time complexity of the erase operation for AVL is ___O(log(n))___ while RB is ___O(1)___.   
+&emsp;Surely, the search efficiency of AVL is much better than RB since AVL is more stable. But it's a compromise among the search, insert and erase from the point of engineering practice to choose RB.  
+&emsp;Besides the choice of internal balance tree, designs of ___interface___ with the use of __template__ also define the quality of the program. One thing we need to handle is that the key and the value are ___paired___ while the search process only knows the key, thus a functor is needed to extract the key from the pair. Also a compare object is needed for further comparsion.  
+&emsp;When it comes to implementation, an extra node named ___header___ is set to be the parent node of the root node, and it's left and right pointor points to the min and max node in ___logical___ order so that the increment and decrement progress of an ___iterator___ will be done much easier.
 
 ###unordered_map
 

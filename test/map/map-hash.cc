@@ -4,10 +4,16 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <string>
+
+#include "../../include/map.hpp"
+
 using namespace std;
+
 default_random_engine myRandom(1021233);
 const int MaxL = 5;
 const int N = 100000;
+
 string randString()
 {
 	uniform_int_distribution<int> c('A', 'G');
@@ -22,7 +28,7 @@ string randString()
 int main()  
 {
 	std::map<string,bool>have;  
-    std::map<string,string>trans;  
+    sjtu::map<string,string>trans;  
     for(int i = 1; i <= N; ++i)
 	{
         string english = randString();

@@ -19,7 +19,6 @@ namespace sjtu
         
 		struct rb_node
 		{
-		public:
 			ElemTypeDef elem;
 			rb_node *parent, *left, *right;
 			ColorTypeDef color;
@@ -48,6 +47,7 @@ namespace sjtu
 					x = x->left;
 				return x;
 			}
+
 			static rb_node* _maximum(rb_node* x)
 			{
 				while (x->right)
@@ -121,6 +121,7 @@ namespace sjtu
 				increment();
 				return tmp;
 			}
+
 			iterator& operator++()
 			{
 				increment();
@@ -236,7 +237,9 @@ namespace sjtu
 
 		class const_iterator
 		{
+			friend class iterator;
 			friend class rb_tree<KeyTypeDef, ElemTypeDef, GetKeyFunc, Compare>;
+
 		private:
 			const rb_node* node;
 			const rb_tree* ascription;

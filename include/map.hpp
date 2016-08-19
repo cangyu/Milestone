@@ -42,14 +42,6 @@ namespace sjtu
 				color(rhs.color)
 			{}
 
-			rb_node& operator=(rb_node rhs)
-			{
-				exchange(rhs);
-				return *this;
-			}
-
-			~rb_node() = default;
-
 			static rb_node* _minimum(rb_node* x)
 			{
 				while (x->left)
@@ -61,16 +53,6 @@ namespace sjtu
 				while (x->right)
 					x = x->right;
 				return x;
-			}
-        
-        private:
-			void exchange(rb_node &rhs)
-			{
-				std::swap(elem, rhs.elem);
-				std::swap(parent, rhs.parent);
-				std::swap(left, rhs.left);
-				std::swap(right, rhs.right);
-				std::swap(color, rhs.color);
 			}
 		};
 

@@ -456,7 +456,6 @@ namespace sjtu
 		{
 			clear();
             
-            header->~rb_node();
             std::free(header);
 			header = nullptr;
 		}

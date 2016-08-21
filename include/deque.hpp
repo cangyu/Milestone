@@ -8,10 +8,12 @@
 #include <cstring>
 #include <cmath>
 #include <new>
+#include <cassert>
 
 namespace sjtu
 {
 //类似于std::deque,但基于块状链表实现
+//确保deque中的node的validLen>=1,不引入validLen=0的node(last除外)
 template<class T>
 class deque
 {
@@ -108,10 +110,80 @@ private:
 			b->prev = a;
 		}
 
+		//只建立a,b之间的连接:a-b
 		static void link(node *a, node *b)
 		{
 			a->next = b;
 			b->prev = a;
+		}
+
+		node* split(const size_t &len)//We assume len >=1 && len <=validLen
+		{
+			if (len >= validLen)
+				return this;
+
+			link(prev, next);
+
+			size_t remain = validLen;
+			size_t cur = 0;
+
+			while (remain > 0)
+			{
+				size_t cnt = remain >= len ? len : remain;
+
+				node *tmp = new node(len);
+				for (auto i = 0; i < cnt; i++)
+					new (tmp->left + i) T(*(left + cur++));
+				
+				tmp->validLen = cnt;
+				insert(tmp, next);
+				remain -= cnt;
+			}
+
+			std::assert(cur == validLen);
+
+			node *ans = next->prev;
+			delete this;
+			return ans;
+		}
+
+		node* merge(const size_t &len, node *terminal)
+		{
+			node *p = this, *q = this;
+			size_t curCnt = 0, nodeCnt = 0;
+
+			//找到本次终结点
+			while (q != terminal && curCnt + q->validLen <= len)
+			{
+				++nodeCnt;
+				curCnt += q->validLen;
+				q = q->next;
+			}
+
+			if (nodeCnt <= 1)//no need to merge
+				return next;
+
+			link(prev, q);
+			//create new node containing all the elements
+			node *tmp = new node(len);
+			size_t k = 0;
+			for (auto t = p; t != q; t = t->next)
+				for (auto i = 0; i < t->validLen; i++)
+					new (tmp->left + k++) T(*(t->left + i));
+
+			tmp->validLen = k;
+
+			//删掉中间的零碎节点
+			node *t = p, *c = nullptr;
+			while (t != q)
+			{
+				c = t;
+				t = t->next;
+				delete c;
+			}
+
+			//ReLink
+			insert(tmp, q);
 		}
 	};
 
@@ -152,6 +224,23 @@ public:
 			origin(_ori),
 			cur(_cur)
 		{}
+
+		iterator(deque<T> *_a, size_t index) :
+			ascription(_a),
+			origin(nullptr),
+			cur(nullptr)
+		{
+			node *terminal = ascription->last;
+			node *p = terminal->next;
+			while (p != terminal && index >= p->validLen)
+			{
+				index -= p->validLen;
+				p = p->next;
+			}
+
+			origin = p;
+			cur = p->left + index;
+		}
 
 		iterator(const iterator &rhs) :
 			ascription(rhs.ascription),
@@ -1044,51 +1133,21 @@ private:
 	void maintain() const
 	{
 		const size_t sn = (size_t)std::ceil(std::sqrt(elemCnt));
+		if (sn == 0) 
+			return;
 
-		node *p = last->next, *q = last->next, *r = last;
-		size_t curCnt = 0;
-
+		node *p = last->next;
 		while (p != last)
 		{
-			//找到本次终结点
-			while (q != last && curCnt + q->validLen <= sn)
+			if (p->validLen >= 2 * sn)
+				p = p->split(sn);
+			else if (p->validLen < sn)
 			{
-				curCnt += q->validLen;
-				q = q->next;
+				p = p->merge(sn, last);
+				p = p->next;
 			}
-
-			//create new node containing all the elements
-			node *tmp = new node(curCnt);
-			size_t k = 0;
-			for (auto t = p; t != q; t = t->next)
-			{
-				if (t->validLen != 0)
-				{
-					for (auto i = 0; i < t->validLen; i++)
-						new (tmp->left + k++) T(*(t->left + i));
-				}
-			}
-			tmp->validLen = curCnt;
-
-			//删掉中间的零碎节点
-			node *t = p, *c = nullptr;
-			while (t != q)
-			{
-				c = t;
-				t = t->next;
-				delete c;
-			}
-
-			//ReLink
-			r->next = tmp;
-			tmp->next = q;
-			q->prev = tmp;
-			tmp->prev = r;
-
-			//next round
-			r = tmp;
-			p = q;
-			curCnt = 0;
+			else
+				p = p->next;
 		}
 	}
 };

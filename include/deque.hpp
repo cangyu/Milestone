@@ -7,8 +7,6 @@
 #include <cstddef>
 #include <cstring>
 #include <cmath>
-#include <new>
-#include <cassert>
 
 namespace sjtu
 {
@@ -117,14 +115,14 @@ private:
 			b->prev = a;
 		}
 
-		node* split(const size_t &len)//We assume len >=1 && len <=validLen
+		static node* split(node *start, const size_t &len)//We assume len >=1 && len <=validLen
 		{
-			if (len >= validLen)
-				return this;
+			if (len >= start->validLen)
+				return start;
 
-			link(prev, next);
+			link(start->prev, start->next);
 
-			size_t remain = validLen;
+			size_t remain = start->validLen;
 			size_t cur = 0;
 
 			while (remain > 0)
@@ -133,23 +131,21 @@ private:
 
 				node *tmp = new node(len);
 				for (auto i = 0; i < cnt; i++)
-					new (tmp->left + i) T(*(left + cur++));
+					new (tmp->left + i) T(*(start->left + cur++));
 				
 				tmp->validLen = cnt;
-				insert(tmp, next);
+				insert(tmp, start->next);
 				remain -= cnt;
 			}
 
-			assert(cur == validLen);
-
-			node *ans = next->prev;
-			delete this;
+			node *ans = start->next->prev;
+			delete start;
 			return ans;
 		}
 
-		node* merge(const size_t &len, node *terminal)
+		static node* merge(node *start, const size_t &len, node *terminal)
 		{
-			node *p = this, *q = this;
+			node *p = start, *q = start;
 			size_t curCnt = 0, nodeCnt = 0;
 
 			//找到本次终结点
@@ -161,24 +157,21 @@ private:
 			}
 
 			if (nodeCnt <= 1)//no need to merge
-				return next;
+				return q;
 
-			link(prev, q);
+			link(start->prev, q);
 			//create new node containing all the elements
 			node *tmp = new node(len);
-			size_t k = 0;
 			for (auto t = p; t != q; t = t->next)
 				for (auto i = 0; i < t->validLen; i++)
-					new (tmp->left + k++) T(*(t->left + i));
-
-			tmp->validLen = k;
+					new (tmp->left + tmp->validLen++) T(*(t->left + i));
 
 			//删掉中间的零碎节点
-			node *t = p, *c = nullptr;
-			while (t != q)
+			node *r = p;
+			while (r != q)
 			{
-				c = t;
-				t = t->next;
+				auto c = r;
+				r = r->next;
 				delete c;
 			}
 
@@ -1044,8 +1037,20 @@ public:
 	{
 		if (empty())
 			throw container_is_empty();
+		
+		--elemCnt;
+		node *p = last->prev;
 
-		erase(--end());
+		if (p->validLen == 1)
+		{
+			node::link(p->prev, p->next);
+			delete p;
+		}
+		else
+		{
+			--p->validLen;
+			(p->left + p->validLen)->~T();
+		}
 	}
 
 	void push_front(const T &value)
@@ -1063,7 +1068,20 @@ public:
 		if (empty())
 			throw container_is_empty();
 
-		erase(begin());
+		--elemCnt;
+		node *p = last->next;
+
+		if (p->validLen == 1)
+		{
+			node::link(p->prev, p->next);
+			delete p;
+		}
+		else
+		{
+			--p->validLen;
+			p->left->~T();
+			++p->left;
+		}
 	}
 
 private:
@@ -1077,7 +1095,7 @@ private:
 		}
 	}
 
-	//将链表中较短的node合并
+	//扫描所有node，较短的合并,较长的拆开
 	void maintain() const
 	{
 		const size_t sn = (size_t)std::ceil(std::sqrt(elemCnt));
@@ -1088,9 +1106,9 @@ private:
 		while (p != last)
 		{
 			if (p->validLen >= 2 * sn)
-				p = p->split(sn);
+				p = node::split(p, sn);
 			else if (p->validLen < sn)
-				p = p->merge(sn, last);
+				p = node::merge(p, sn, last);
 			else
 				p = p->next;
 		}

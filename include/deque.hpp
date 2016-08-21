@@ -140,7 +140,7 @@ private:
 				remain -= cnt;
 			}
 
-			std::assert(cur == validLen);
+			assert(cur == validLen);
 
 			node *ans = next->prev;
 			delete this;
@@ -184,6 +184,7 @@ private:
 
 			//ReLink
 			insert(tmp, q);
+			return q;
 		}
 	};
 
@@ -210,13 +211,6 @@ public:
 		node *origin;
 		T *cur;
 
-		void exchange(iterator &rhs)
-		{
-			std::swap(ascription, rhs.ascription);
-			std::swap(origin, rhs.origin);
-			std::swap(cur, rhs.cur);
-		}
-
 	public:
 		//constructor
 		iterator(deque<T> *_a = nullptr, node *_ori = nullptr, T *_cur = nullptr) :
@@ -227,7 +221,7 @@ public:
 
 		iterator(deque<T> *_a, size_t index) :
 			ascription(_a),
-			origin(nullptr),
+			origin(_a->last),
 			cur(nullptr)
 		{
 			node *terminal = ascription->last;
@@ -238,8 +232,11 @@ public:
 				p = p->next;
 			}
 
-			origin = p;
-			cur = p->left + index;
+			if (p != terminal)
+			{
+				origin = p;
+				cur = p->left + index;
+			}
 		}
 
 		iterator(const iterator &rhs) :
@@ -247,16 +244,6 @@ public:
 			origin(rhs.origin),
 			cur(rhs.cur)
 		{}
-
-		//destructor
-		~iterator() = default;
-
-		//assignment
-		iterator& operator=(iterator rhs)
-		{
-			exchange(rhs);
-			return *this;
-		}
 
 		// return the distance between two iterator,
 		// if these two iterators point to different deque, throw invaild_iterator.
@@ -294,8 +281,6 @@ public:
 				{
 					//本node内剩余的可从当前位置前进的步数
 					//while中的条件保证了origin->left!=nullptr
-					//在迭代过程中，虽然有可能cur落在validLen=0的node上，使得curRemainCnt=-1
-					//但是这只会落到下面的else中，并由于+1的存在，不会错误地改变n
 					int curRemainCnt = origin->validLen - (cur - origin->left) - 1;
 
 					if (n <= curRemainCnt)//可以在本node内部解决
@@ -485,13 +470,6 @@ public:
 		const node *origin;
 		const T *cur;
 
-		void exchange(const_iterator &rhs)
-		{
-			std::swap(ascription, rhs.ascription);
-			std::swap(origin, rhs.origin);
-			std::swap(cur, rhs.cur);
-		}
-
 	public:
 		//constructor
 		const_iterator(const deque<T> *_a = nullptr, const node *_ori = nullptr, const T *_cur = nullptr) :
@@ -499,6 +477,26 @@ public:
 			origin(_ori),
 			cur(_cur)
 		{}
+
+		const_iterator(const deque<T> *_a, size_t index) :
+			ascription(_a),
+			origin(_a->last),
+			cur(nullptr)
+		{
+			node *terminal = ascription->last;
+			node *p = terminal->next;
+			while (p != terminal && index >= p->validLen)
+			{
+				index -= p->validLen;
+				p = p->next;
+			}
+
+			if (p != terminal)
+			{
+				origin = p;
+				cur = p->left + index;
+			}
+		}
 
 		const_iterator(const iterator &rhs) :
 			ascription(rhs.ascription),
@@ -511,16 +509,6 @@ public:
 			origin(rhs.origin),
 			cur(rhs.cur)
 		{}
-
-		//destructor
-		~const_iterator() = default;
-
-		//assignment
-		const_iterator& operator=(const_iterator rhs)
-		{
-			exchange(rhs);
-			return *this;
-		}
 
 		// return the distance between two iterator,
 		// if these two iterators point to different deque, throw invaild_iterator.
@@ -589,8 +577,7 @@ public:
 			else
 			{
 				//Semantics: 若在移动一步之后遇到end(),则invalid，即不能跨越begin()
-				do
-				{
+				do {
 					//前方剩余的可前进的步数
 					//注意：nullptr只能用于比较，不能用于运算
 					int frontLeftCnt = cur ? cur - origin->left : 0;
@@ -752,14 +739,10 @@ public:
 		last(new node()),
 		needMaintain(new bool(false))
 	{
-		//deep copy,只拷贝包含数据元素的node
-		for (node *p = rhs.last->next; p != rhs.last; p = p->next)
-		{
+		for (node *p = rhs.last->next; p != rhs.last; p = p->next)//deep copy,只拷贝包含数据元素的node
 			if (p->validLen != 0)
 				node::insert(new node(*p), last);
-		}
 
-		//整理
 		maintain();
 	}
 
@@ -782,12 +765,7 @@ public:
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
 
-		if (*needMaintain)
-		{
-			maintain();
-			*needMaintain = false;
-		}
-
+		update();
 		return *(iterator(this, pos));
 	}
     
@@ -796,12 +774,7 @@ public:
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
 
-		if (*needMaintain)
-		{
-			maintain();
-			*needMaintain = false;
-		}
-
+		update();
 		return *(const_iterator(this, pos));
 	}
     
@@ -836,46 +809,26 @@ public:
 	//iterator to the beginning
 	iterator begin()
 	{ 
-		if (*needMaintain)
-		{
-			maintain();
-			*needMaintain = false;
-		}
-
+		update();
 		return iterator(this, last->next, last->next->left);
 	}
 
 	const_iterator cbegin() const
 	{ 
-		if (*needMaintain)
-		{
-			maintain();
-			*needMaintain = false;
-		}
-
+		update();
 		return const_iterator(this, last->next, last->next->left);
 	}
 
 	//iterator to the end
 	iterator end()
 	{
-		if (*needMaintain)
-		{
-			maintain();
-			*needMaintain = false;
-		}
-
+		update();
 		return iterator(this, last, nullptr);
 	}
 
 	const_iterator cend() const
 	{ 
-		if (*needMaintain)
-		{
-			maintain();
-			*needMaintain = false;
-		}
-
+		update();
 		return const_iterator(this, last, nullptr);
 	}
 
@@ -1089,6 +1042,9 @@ public:
 
 	void pop_back()
 	{
+		if (empty())
+			throw container_is_empty();
+
 		erase(--end());
 	}
 
@@ -1104,29 +1060,21 @@ public:
 
 	void pop_front()
 	{
-		//erase不会改变needMaintain标志
+		if (empty())
+			throw container_is_empty();
+
 		erase(begin());
 	}
 
 private:
-	//根据下标返回iterator
-	//要确保index合法！
-	node* find(size_t &index) const
+	//Warpper for maintain
+	void update() const
 	{
 		if (*needMaintain)
 		{
 			maintain();
 			*needMaintain = false;
 		}
-
-		node *p = last->next;
-		while (index >= p->validLen)
-		{
-			index -= p->validLen;
-			p = p->next;
-		}
-
-		return p;
 	}
 
 	//将链表中较短的node合并
@@ -1142,10 +1090,7 @@ private:
 			if (p->validLen >= 2 * sn)
 				p = p->split(sn);
 			else if (p->validLen < sn)
-			{
 				p = p->merge(sn, last);
-				p = p->next;
-			}
 			else
 				p = p->next;
 		}

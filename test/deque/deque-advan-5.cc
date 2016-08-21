@@ -5,9 +5,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
-#include "deque.hpp"
-#include "exceptions.hpp"
-
+#include "../../include/deque.hpp"
+#include "../../include/exceptions.hpp"
 
 /***************************/
 bool need_to_check_throw = 1;

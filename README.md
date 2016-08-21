@@ -1,5 +1,4 @@
 # Milestone
-Course project for Data Structure.  
 Containers like ***vector, list, deque, stack, queue, priority\_queue, map*** and ***unordered\_map*** were implemented.  
 Also, some generic algorithms like ***sort, list\_sort*** and ***make\_heap*** were done at last.  
 All the code were checked with valgrind to ensure that there's no memory leak. Suggestions are welcome!

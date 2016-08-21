@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
-#include "deque.hpp"
+#include "../../include/deque.hpp"
 
 using namespace std;
 

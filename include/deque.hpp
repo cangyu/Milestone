@@ -11,11 +11,7 @@
 
 namespace sjtu
 {
-//类似于std::deque,但基于块状链表实现，采用惰性插入的方法
-//insert和erase不会触发对每个node大小的动态调整
-//只有在access的时候才可能调整每个node的容量到sqrt(n)
-//并且这种调整只会在第一次access进行，以后的access不用再重新整理
-//这样insert、erase的均摊复杂度为O(1)
+//类似于std::deque,但基于块状链表实现
 template<class T>
 class deque
 {
@@ -108,6 +104,12 @@ private:
 		{
 			b->next = a->next;
 			a->next->prev = b;
+			a->next = b;
+			b->prev = a;
+		}
+
+		static void link(node *a, node *b)
+		{
 			a->next = b;
 			b->prev = a;
 		}
@@ -691,8 +693,13 @@ public:
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
 
-		node *p = find(pos);
-		return *(p->left + pos);
+		if (*needMaintain)
+		{
+			maintain();
+			*needMaintain = false;
+		}
+
+		return *(iterator(this, pos));
 	}
     
 	const T& at(size_t pos) const
@@ -700,8 +707,13 @@ public:
 		if (pos >= elemCnt)
 			throw index_out_of_bound();
 
-		node *p = find(pos);
-		return *(p->left + pos);
+		if (*needMaintain)
+		{
+			maintain();
+			*needMaintain = false;
+		}
+
+		return *(const_iterator(this, pos));
 	}
     
 	T& operator[](const size_t &pos)
@@ -735,36 +747,46 @@ public:
 	//iterator to the beginning
 	iterator begin()
 	{ 
-		if (empty())
-			return end();
-		else
+		if (*needMaintain)
 		{
-			size_t target = 0;
-			node *p = find(target);
-			return iterator(this, p, p->left + target);
+			maintain();
+			*needMaintain = false;
 		}
+
+		return iterator(this, last->next, last->next->left);
 	}
 
 	const_iterator cbegin() const
 	{ 
-		if (empty())
-			return cend();
-		else
+		if (*needMaintain)
 		{
-			size_t target = 0;
-			node *p = find(target);
-			return const_iterator(this, p, p->left + target);
+			maintain();
+			*needMaintain = false;
 		}
+
+		return const_iterator(this, last->next, last->next->left);
 	}
 
 	//iterator to the end
 	iterator end()
-	{ 
+	{
+		if (*needMaintain)
+		{
+			maintain();
+			*needMaintain = false;
+		}
+
 		return iterator(this, last, nullptr);
 	}
 
 	const_iterator cend() const
 	{ 
+		if (*needMaintain)
+		{
+			maintain();
+			*needMaintain = false;
+		}
+
 		return const_iterator(this, last, nullptr);
 	}
 
@@ -846,7 +868,8 @@ public:
 		else//当前node已满,split
 		{
 			node *p = pos.origin;
-			*needMaintain = true;
+			const size_t ansIndex = pos.getIndex();
+			//*needMaintain = true;
 
 			size_t leftMoveCnt = pos.cur ? pos.cur - p->left : 0;//[left,pos)之间元素个数,处理了pos为end的情况
 			size_t rightMoveCnt = p->validLen - leftMoveCnt;//[pos,left+validLen)之间元素个数
@@ -865,14 +888,14 @@ public:
 				//insert value
 				tmp->validLen = leftAllocCnt;
 				new (tmp->left + tmp->validLen - 1) T(value);
-
+				
 				//修正原node
 				for (auto i = 0; i < leftMoveCnt; i++)
 					(p->left + i)->~T();
 				p->left = pos.cur;
 				p->validLen -= leftMoveCnt;
 
-				return iterator(this, tmp, tmp->getBackPtr());
+				//return iterator(this, tmp, tmp->getBackPtr());
 			}
 			else//右半部分元素较少
 			{
@@ -892,8 +915,11 @@ public:
 				new (pos.cur) T(value);
 				p->validLen -= (rightMoveCnt - 1);
 
-				return pos;
+				//return pos;
 			}
+
+			maintain();
+			return  iterator(this, ansIndex);
 		}
 	}
 	
@@ -905,48 +931,59 @@ public:
 
 		--elemCnt;
 		node *p = pos.origin;
-		int leftMoveCnt = pos.cur - p->left;//[left,pos)之间的元素个数
-		int rightMoveCnt = p->validLen - leftMoveCnt - 1;//(pos,left+validLen)之间的元素个数
 
-		if (leftMoveCnt < rightMoveCnt)//左边元素较少，[left,pos)之间的元素向后move一个单位
+		if (p->validLen == 1)
 		{
-			T *dstStart = pos.cur;
-			T *srcStart = dstStart - 1;
-
-			for (auto i = 0; i < leftMoveCnt; i++)
-			{
-				(dstStart - i)->~T();
-				new (dstStart - i) T(*(srcStart - i));
-			}
-			p->left->~T();
-
-			++p->left;			
-			--p->validLen;
-
-			++pos.cur;
-			return pos;
+			node::link(p->prev, p->next);
+			node *t = p->next;
+			delete p;
+			return iterator(this, t, t->left);
 		}
-		else//右边元素较少，(pos,left+validLen)之间的元素向前move一个单位
+		else
 		{
-			T *dstStart = pos.cur;
-			T *srcStart = dstStart + 1;
+			int leftMoveCnt = pos.cur - p->left;//[left,pos)之间的元素个数
+			int rightMoveCnt = p->validLen - leftMoveCnt - 1;//(pos,left+validLen)之间的元素个数
 
-			for (auto i = 0; i < rightMoveCnt; i++)
+			if (leftMoveCnt < rightMoveCnt)//左边元素较少，[left,pos)之间的元素向后move一个单位
 			{
-				(dstStart + i)->~T();
-				new (dstStart + i) T(*(srcStart + i));
-			}
+				T *dstStart = pos.cur;
+				T *srcStart = dstStart - 1;
 
-			--p->validLen;
-			(p->left + p->validLen)->~T();
+				for (auto i = 0; i < leftMoveCnt; i++)
+				{
+					(dstStart - i)->~T();
+					new (dstStart - i) T(*(srcStart - i));
+				}
+				p->left->~T();
 
-			if (pos.cur == p->left + p->validLen)
-			{
-				do { p = p->next; } while (p != last && p->validLen == 0);
-				return iterator(this, p, p->left);
-			}
-			else
+				++p->left;
+				--p->validLen;
+
+				++pos.cur;
 				return pos;
+			}
+			else//右边元素较少，(pos,left+validLen)之间的元素向前move一个单位
+			{
+				T *dstStart = pos.cur;
+				T *srcStart = dstStart + 1;
+
+				for (auto i = 0; i < rightMoveCnt; i++)
+				{
+					(dstStart + i)->~T();
+					new (dstStart + i) T(*(srcStart + i));
+				}
+
+				--p->validLen;
+				(p->left + p->validLen)->~T();
+
+				if (pos.cur == p->left + p->validLen)
+				{
+					do { p = p->next; } while (p != last && p->validLen == 0);
+					return iterator(this, p, p->left);
+				}
+				else
+					return pos;
+			}
 		}
 	}
 

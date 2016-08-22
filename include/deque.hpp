@@ -48,20 +48,6 @@ private:
 				left = start = (T *)std::malloc(_len * sizeof(T));//注意：虽然malloc的参数可以为0，但应尽量避免
 		}
 
-		~node()
-		{
-			if (start)//注意：只在start不为nullptr时才能free
-			{
-				for (auto i = 0; i < validLen; i++)
-					(left + i)->~T();
-
-				std::free(start);//需要在后面避免重复释放
-			}
-
-			start = left = nullptr;
-			totalLen = validLen = 0;
-		}
-
 		node(const node &rhs) :
 			prev(this),
 			next(this),
@@ -76,6 +62,20 @@ private:
 				for (auto i = 0; i < validLen; i++)
 					new (left + i) T(*(rhs.left + i));
 			}
+		}
+
+		~node()
+		{
+			if (start)
+			{
+				for (auto i = 0; i < validLen; i++)
+					(left + i)->~T();
+
+				std::free(start);//需要在后面避免重复释放
+			}
+
+			start = left = nullptr;
+			totalLen = validLen = 0;
 		}
 
 		node& operator=(node rhs)
@@ -866,7 +866,7 @@ public:
 			size_t rightMoveCnt = pos.origin->validLen - leftMoveCnt;//[pos,left+validLen)之间元素个数
 			size_t leftEmptyCnt = pos.origin->left - pos.origin->start;//左边空余的数量
 			size_t rightEmptyCnt = pos.origin->totalLen - leftEmptyCnt - pos.origin->validLen;//右边空余的数量
-			bool moveToLeft = leftEmptyCnt == 0 ? false : (rightMoveCnt == 0 ? true : leftMoveCnt <= rightMoveCnt);//确定移动方向
+			bool moveToLeft = leftEmptyCnt == 0 ? false : (rightEmptyCnt == 0 ? true : leftMoveCnt <= rightMoveCnt);//确定移动方向
 
 			//move elements
 			if (moveToLeft)
@@ -904,7 +904,6 @@ public:
 		{
 			node *p = pos.origin;
 			const size_t ansIndex = pos.getIndex();
-			//*needMaintain = true;
 
 			size_t leftMoveCnt = pos.cur ? pos.cur - p->left : 0;//[left,pos)之间元素个数,处理了pos为end的情况
 			size_t rightMoveCnt = p->validLen - leftMoveCnt;//[pos,left+validLen)之间元素个数
@@ -926,11 +925,11 @@ public:
 				
 				//修正原node
 				for (auto i = 0; i < leftMoveCnt; i++)
-					(p->left + i)->~T();
-				p->left = pos.cur;
+				{
+					p->left->~T();//有改动，可能有问题
+					++p->left;//有改动，可能有问题
+				}
 				p->validLen -= leftMoveCnt;
-
-				//return iterator(this, tmp, tmp->getBackPtr());
 			}
 			else//右半部分元素较少
 			{
@@ -949,8 +948,6 @@ public:
 				//insert
 				new (pos.cur) T(value);
 				p->validLen -= (rightMoveCnt - 1);
-
-				//return pos;
 			}
 
 			maintain();
@@ -1106,9 +1103,9 @@ private:
 		while (p != last)
 		{
 			if (p->validLen >= 2 * sn)
-				p = node::split(p, sn);
+				p = node::split(p, sn);//返回split后的最后一个
 			else if (p->validLen < sn)
-				p = node::merge(p, sn, last);
+				p = node::merge(p, sn, last);//返回merge后的下一个
 			else
 				p = p->next;
 		}

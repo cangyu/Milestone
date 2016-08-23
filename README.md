@@ -3,7 +3,7 @@ Containers like ***vector, list, deque, stack, queue, priority\_queue, map*** an
 Also, some generic algorithms like ***sort, list\_sort*** and ***make\_heap*** were done at last.  
 All the code were checked with valgrind to ensure that there's no memory leak. Suggestions are welcome!
 
-## Implementation Keypoints
+## Implementation Memo
 ###vector
 &emsp;The key parts of a vector are the ___erase___ and ___insert___ operations, whose time complexity are O(n).  
 &emsp;Attentation should be paid to the so called ___"deep copy"___ operations when moving the objects inside or using the assignment operator, since objects may have pointers pointing to dynamic memory outside the vector.  
@@ -16,8 +16,8 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 &emsp;Although the erase and insert operations on certain data node won't cause iterators pointing to other data nodes to be invalid,  I implement the ___isValid___ function inside the ___iterator___ to check if the iterator is ascripted to the given list and if the iterator is still valid after inserting or erasing with ___O(n)___ time complexity.
 
 ###deque
-&emsp;Here the deque was implemented based on ___Block List___, which combines the advantages of vector and list and provides ___O(sqrt(n))___ performance for ___search___, ___insert___ and ___erase___ operations.  
-&emsp;However, it's frustrating to realize that efficiency and standards are not always compatible. For example, if we want to improve the performance, we can adopt a "lazy" strategy in push and insert operations to get better ___amortized___ performance, where maintain operation is postponed until an access operation is detected. This is just like what were done in Splay or Fibonacci Heap, but things got changed when iterator was introduced. We must follow the basic semantics and requirements of iterator: if there's no insert nor erase operations, existing iterators must be valid! This is impossible if we do following operations:"__auto itA=insert(pos,val); auto itB=begin();___" as __itA__ may become invalid after maintain operations were done in begin(). So, after each operations that related to iterator, we must keep the internal structure stable for next operation, which hindered us from using more advanced tactics to further optimized the performance.  
+&emsp;Here the deque was implemented with ___Block List___, which combines the advantages of vector and list and provides ___O(sqrt(n))___ performance for ___search___, ___insert___ and ___erase___ operations.  
+&emsp;However, it's frustrating to realize that efficiency and standards are not always compatible. For example, if we want to improve the performance, we can adopt a "lazy" strategy in push and insert operations to get better ___amortized___ performance, where maintain operation is postponed until an access operation is detected. This is just like what were done in Splay or Fibonacci Heap, but things got changed when iterator was introduced. We must follow the basic semantics and requirements of iterator: if there's no insert nor erase operations, existing iterators must be valid! This is impossible if we do following operations:"___auto itA=insert(pos,val); auto itB=begin();___" as __itA__ may become invalid after maintain operations were done in begin(). So, after each operations that related to iterator, we must keep the internal structure stable for next operation, which hindered us from using more advanced tactics to further optimized the performance.  
 &emsp;Meanwhile, it's of great importance to keep something ___invariant___ when designing the program. They were helpful in handling corner cases and avoind making mistakes. The "___KISS___" principle should be reminded so that it won't be too complicated to figure them out. Besides, be careful to avoid low-level mistakes like wrong operating direction or wrongly used variable... sigh...
 
 ###stack
@@ -37,13 +37,18 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 ###map
 &emsp;Although there're many kinds of balance tree can be applied like Binary Tree, AVL, RB, AA, Splay, Treap, Skip List and so on, we use the famous ___Red-Black Tree___ as the internal infrastructure for map. It's important to clarify why we choose RB instead of ___AVL___, which is more balanced than RB.  
 &emsp;As we know, the mostly used operations of a map are ___insert___ and ___erase___. After a new node was inserted, the tree may get unbalanced, and the re-balance process will be taken. For both AVL and RB, it will take at most ***2*** times of ***rotation*** in the worst cases. Thus, the time complexity of the insert operation for a map is ___O(1)___.  
-&emsp;However, when it comes to the re-balance process for an erase operation, all the nodes ***along*** the path from root to the erased node ___may___ be maintained for AVL while RB needs at most ***3*** times of rotation. Thus, the time complexity of the erase operation for AVL is ___O(log(n))___ while RB is ___O(1)___. Surely, the ___search___ efficiency of AVL is much better than RB since AVL is more stable, but it's a compromise among the search, insert and erase operations from the point of engineering practice to choose RB.  
+&emsp;However, when it comes to the re-balance process for an erase operation, all the nodes ***along*** the path from root to the erased node ___may___ be maintained for AVL while RB needs at most ***3*** times of rotation. Thus, the time complexity of the erase operation for AVL is ___O(log(n))___ while RB is ___O(1)___. Surely, the ___search___ efficiency of AVL is much better than RB since AVL is more stable, but it's a compromise among the search, insert and erase operations in engineering practice to choose RB.  
 &emsp;Beside the choice of internal balance tree, designs of ___interface___ with the use of __template__ also define the quality of the program. One thing we need to handle is that the key and the value are ___paired___ while the search routine only knows the key, thus a ___getKey___ functor is needed to extract the key from the pair. Also a compare object is needed for further comparsion.  
 &emsp;When it comes to implementation, an extra node named ___header___ is set to be the parent node of the root node, and it's left and right pointor points to the min and max node in ___logical___ order so that the increment and decrement progress of an ___iterator___ will be done much easier. Further more, proper construction and destruction of the header also play a vital role in this program so that classes ___without___ default constructor can be accepted as well.
 
 ###unordered_map
 &emsp;Based on ___hashtable___, this data structure provides ___O(1)___ time complexity to access, insert and erase an element when the load factor is less than 0.5. We adopt the "___separate chaining___" strategy, and the hash function by default is std::hash.  
 &emsp;It doesn't take much effort to implement the ___insert___ and ___erase___ functions, and the ___search___ function is rather trival. But we need to ___resize___ the hashtable dynamically when it grows to keep the ___load factor___ under 1/2. Note that there's no backward-marching for the ___iterator___, special attention should be paid to the forward-marching operation of an iterator when it reaches the margin of two buckets.
+
+###generic algorithms
+&emsp;___sort___:  
+&emsp;___list_sort___:  
+&emsp;___make_heap___: Just start from the last node that is not leaf, then adjust each sub-tree  until root node is adjusted, so that the property of heap is maintained. Convincely, the time complexity of this algorithm is ___O(n)___ since each adjust on sub-tree takes ___O(h)___ time comsumption, where h stands for the height of the heap.
 
 ## Declaration
 The framework of this project is based on the course project of DS2016, ACM Class, SJTU. I'm full of admiration for the wonderful work they've done!

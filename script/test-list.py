@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 
-selfname="priority_queue"
+selfname="list"
 outputType=".exe"
 resultType=".txt"
 globalResultsDir="../results"

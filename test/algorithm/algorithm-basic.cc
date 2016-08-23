@@ -120,6 +120,6 @@ int main()
 	}
 	cout << "pass all" << endl;
 
-	system("pause");
+	//system("pause");
 	return 0;
 }

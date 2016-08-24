@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <algorithm>
+#include <functional>
 
 namespace sjtu 
 {
@@ -14,9 +15,6 @@ template<typename T>
 class list
 {
 private:
-	//list�еĽڵ�
-	//������Ĭ�Ϲ��컹�ǿ���������Ǹ�ֵ��
-	//���������Է���ָ�룬ֻ����data��������ָ��ָ���Լ�
 	class node
 	{
 		friend class list<T>;
@@ -50,11 +48,20 @@ private:
 		}
 
 		//given node a and b, insert a before b
-		static void insert_single(node *a, node *b)
+		static void insert_before(node *a, node *b)
 		{
 			b->prev->next = a;
 			a->next = b;
 			a->prev = b->prev;
+			b->prev = a;
+		}
+
+		//given node a and b, insert b after a
+		static void insert_after(node *a, node *b)
+		{
+			b->next = a->next;
+			a->next = b;
+			b->next->prev = b;
 			b->prev = a;
 		}
 
@@ -63,6 +70,14 @@ private:
 		{
 			a->next = b;
 			b->prev = a;
+		}
+
+		//extract single node from list
+		static void extract_single(node *t)
+		{
+			t->prev->next = t->next;
+			t->next->prev = t->prev;
+			t->prev = t->next = t;
 		}
 	};
 
@@ -77,8 +92,6 @@ private:
 
 public:
 	//iterator that knows the ascription
-	//����list�Ĳ���ɾ���������������ĵ�����ʧЧ��
-	//���Բ���Ҫ��list����������ָʾlist��last��Ϣ
 	class const_iterator;
 	class iterator 
 	{			
@@ -88,12 +101,6 @@ public:
 	private:
 		list<T> *ascription;
 		node *cur;
-
-		void exchange(iterator &rhs)
-		{
-			std::swap(ascription, rhs.ascription);
-			std::swap(cur, rhs.cur);
-		}
 
 	public:
 		iterator(list<T> *_a = nullptr, node *_c = nullptr) : 
@@ -107,12 +114,6 @@ public:
 		{}
 
 		~iterator() = default;
-		
-		iterator& operator=(iterator rhs)
-		{
-			exchange(rhs);
-			return *this;
-		}
 		
 		//iter++
 		iterator operator++(int) 
@@ -215,12 +216,6 @@ public:
 		const list<T> *ascription;
 		const node *cur;
 
-		void exchange(iterator &rhs)
-		{
-			std::swap(ascription, rhs.ascription);
-			std::swap(cur, rhs.cur);
-		}
-
 	public:
 		//default constructor
 		const_iterator(const list<T> *_a = nullptr, const node *_c = nullptr) :
@@ -242,13 +237,6 @@ public:
 
 		//destructor
 		~const_iterator() = default;
-
-		//assignment operator
-		const_iterator& operator=(const_iterator rhs)
-		{
-			exchange(rhs);
-			return *this;
-		}
 
 		//iter++
 		const_iterator operator++(int)
@@ -361,7 +349,7 @@ public:
 		while (t != rhs.last)
 		{
 			p = new node(*t);
-			node::insert_single(p, last);
+			node::insert_before(p, last);
 			t = t->next;
 		}
 	}
@@ -459,7 +447,7 @@ public:
 			throw invalid_iterator();
 
 		node *p = new node(value);
-		node::insert_single(p, pos.cur);
+		node::insert_before(p, pos.cur);
 		++elemCnt;
 
 		return iterator(this, p);
@@ -537,6 +525,108 @@ public:
 	void pop_front() 
 	{ 
 		erase(begin()); 
+	}
+
+	//Sort the elements in [beg,end) in target using given compare object.
+	//For better understanding the idea behind, refer to: https://www.zhihu.com/question/31478115/answer/52104149
+	template<class Compare=std::less<T>>
+	static void sort(list<T> &target, const iterator &beg, const iterator &end, Compare cmp)
+	{
+		//Pre-Check
+		if (beg.ascription != &target)	throw invalid_iterator("beg","Not belongs to target!\n");
+		if (end.ascription != &target)	throw invalid_iterator("end", "Not belongs to target!\n");
+
+		int cnt = 0;
+		for (iterator t = beg; t != end; ++t)
+		{
+			if (t.cur == target.last) 
+				throw invalid_iterator("beg", "Invalid begining position!\n");
+			++cnt;
+		}
+		if (cnt <= 1)	return;
+		
+		//Merge Sort
+		list<T> counter[64];
+		node *r = beg.cur->prev;
+		int srcIndex = 0;
+
+		while (beg != end)
+		{
+			auto t = beg.cur;
+			++beg;
+
+			node::extract_single(t);
+			insert_before(t, counter[0].last);
+			++counter[0].elemCnt;
+
+			while (!counter[srcIndex + 1].empty())//merge
+			{
+				//merge counter[srcIndex] and counter[srcIndex+1] to counter[srcIndex+1]
+				auto e1 = counter[srcIndex].last;
+				auto e2 = counter[srcIndex + 1].last;
+				auto p1 = e1->next;
+				auto p2 = e2->next;
+				auto tmp = p1;
+
+				while (p1 != e1 && p2 != e2)
+				{
+					if (comp(*p1, *p2))
+					{
+						tmp = p1;
+						p1 = p1->next;
+
+						--counter[srcIndex].elemCnt;
+						++counter[srcIndex + 1].elemCnt;
+					}
+					else
+					{
+						tmp = p2;
+						p2 = p2->next;
+					}
+
+					node::extract_single(tmp);
+					insert_after(e2, tmp);
+				}
+
+				while (p1 != e1)
+				{
+					tmp = p1;
+					p1 = p1->next;
+
+					--counter[srcIndex].elemCnt;
+					++counter[srcIndex + 1].elemCnt;
+
+					node::extract_single(tmp);
+					insert_after(e2, tmp);
+				}
+
+				while (p2 != e2)
+				{
+					tmp = p2;
+					p2 = p2->next;
+
+					node::extract_single(tmp);
+					insert_after(e2, tmp);
+				}
+
+				++srcIndex;//next round
+			}
+
+			//move counter[srcIndex] to counter[srcIndex+1]
+			counter[srcIndex].exchange(counter[srcIndex + 1]);
+			++srcIndex;//本次归并后元素所在的最终counter
+		}
+
+		//re-link results to beg and end
+		auto p = counter[srcIndex].last;
+
+		r->next = p->next;
+		p->prev->next = end.cur;
+		end.cur->prev = p->prev;
+		p->prev->prev = r;
+
+		p->prev = p->next = p;
+		counter[srcIndex].elemCnt = 0;
 	}
 };
 

@@ -530,7 +530,7 @@ public:
 	//Sort the elements in [beg,end) in target using given compare object.
 	//For better understanding the idea behind, refer to: https://www.zhihu.com/question/31478115/answer/52104149
 	template<class Compare=std::less<T>>
-	static void sort(list<T> &target, const iterator &beg, const iterator &end, Compare cmp)
+	static void sort(list<T> &target, iterator beg, iterator end)
 	{
 		//Pre-Check
 		if (beg.ascription != &target)	throw invalid_iterator("beg","Not belongs to target!\n");
@@ -544,7 +544,9 @@ public:
 			++cnt;
 		}
 		if (cnt <= 1)	return;
-		
+	
+		Compare cmp;
+
 		//Merge Sort
 		list<T> counter[64];
 		node *r = beg.cur->prev;
@@ -556,7 +558,7 @@ public:
 			++beg;
 
 			node::extract_single(t);
-			insert_before(t, counter[0].last);
+			node::insert_before(t, counter[0].last);
 			++counter[0].elemCnt;
 
 			while (!counter[srcIndex + 1].empty())//merge
@@ -570,7 +572,7 @@ public:
 
 				while (p1 != e1 && p2 != e2)
 				{
-					if (comp(*p1, *p2))
+					if (cmp(p1->data, p2->data))
 					{
 						tmp = p1;
 						p1 = p1->next;
@@ -585,7 +587,7 @@ public:
 					}
 
 					node::extract_single(tmp);
-					insert_after(e2, tmp);
+					node::insert_after(e2, tmp);
 				}
 
 				while (p1 != e1)
@@ -597,7 +599,7 @@ public:
 					++counter[srcIndex + 1].elemCnt;
 
 					node::extract_single(tmp);
-					insert_after(e2, tmp);
+					node::insert_after(e2, tmp);
 				}
 
 				while (p2 != e2)
@@ -606,7 +608,7 @@ public:
 					p2 = p2->next;
 
 					node::extract_single(tmp);
-					insert_after(e2, tmp);
+					node::insert_after(e2, tmp);
 				}
 
 				++srcIndex;//next round

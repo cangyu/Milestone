@@ -14,9 +14,9 @@ template<typename T>
 class list
 {
 private:
-	//listÖÐµÄ½Úµã
-	//²»ÂÛÊÇÄ¬ÈÏ¹¹Ôì»¹ÊÇ¿½±´¹¹Ôì»òÊÇ¸³Öµ£¬
-	//¾ù²»¿½±´¶Ô·½µÄÖ¸Õë£¬Ö»¿½±´data£¬²¢±£³ÖÖ¸ÕëÖ¸Ïò×Ô¼º
+	//listï¿½ÐµÄ½Úµï¿½
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï¹ï¿½ï¿½ì»¹ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½Öµï¿½ï¿½
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô·ï¿½ï¿½ï¿½Ö¸ï¿½ë£¬Ö»ï¿½ï¿½ï¿½ï¿½dataï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ô¼ï¿½
 	class node
 	{
 		friend class list<T>;
@@ -77,8 +77,8 @@ private:
 
 public:
 	//iterator that knows the ascription
-	//ÓÉÓÚlistµÄ²åÈëÉ¾³ý²»»áÒýÆðÆäËüµÄµü´úÆ÷Ê§Ð§£¬
-	//ËùÒÔ²»ÐèÒªÔÚlistÖÐÒýÈë¶îÍâµÄÖ¸Ê¾listµÄlastÐÅÏ¢
+	//ï¿½ï¿½ï¿½ï¿½listï¿½Ä²ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½Ê§Ð§ï¿½ï¿½
+	//ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½Òªï¿½ï¿½listï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸Ê¾listï¿½ï¿½lastï¿½ï¿½Ï¢
 	class const_iterator;
 	class iterator 
 	{			

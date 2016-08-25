@@ -47,7 +47,7 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 
 ###generic algorithms
 &emsp;___sort___:  
-&emsp;___list_sort___:  
+&emsp;___list_sort___:Same as SGI STL, we use ___iterative merge sort___ algorithm to effectively sort the elements with ___O(nlog(n))___. To avoid re-construction of elements, we just adjust the pointers internally, and sorting 100,000,000 elements costs only 10+ seconds!   
 &emsp;___make_heap___: Just start from the last node that is not leaf, then adjust each sub-tree  until root node is adjusted, so that the property of heap is maintained. The time complexity of this algorithm is ___O(n)___ since each adjust on sub-tree takes ___O(h)___ time consumption, where h stands for the height of the heap.
 
 ## Testing Commands

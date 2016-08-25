@@ -110,9 +110,9 @@ void TestMakeHeap()
 int main()
 {
 	try {
-		//TestArraySort();
-		//TestStdVectorSort();
-		//TestSjtuVector();
+		TestArraySort();
+		TestStdVectorSort();
+		TestSjtuVector();
 		TestMakeHeap();
 	} catch (const char *s) {
 		cout << s << endl;

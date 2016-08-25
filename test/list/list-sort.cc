@@ -6,7 +6,7 @@
 
 using namespace std;
 
-const int N=1000;
+const int N=100000000;
 
 int main()
 {
@@ -22,11 +22,18 @@ int main()
 	sort(va.begin(),va.end());
 	sjtu::list<int>::sort(vl,vl.begin(),vl.end());
 
-	auto it=vl.begin();
-	for(int i=0;i<N;i++)
-		if(va[i]!=*it++)
-			cout<<"Failed!\n";
-	cout<<"Pass!\n";
+	bool result = true;
 
+	auto it=vl.begin();
+	for (int i = 0; i < N; i++)
+	{
+		if (va[i] != *it++)
+		{
+			result = false;
+			break;
+		}
+	}
+
+	cout << (result ? "Pass!" : "Fail!")<< endl;
 	return 0;
 }

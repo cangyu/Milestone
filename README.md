@@ -47,14 +47,19 @@ All the code were checked with valgrind to ensure that there's no memory leak. S
 
 ###generic algorithms
 &emsp;___sort___:  
-&emsp;___list_sort___:Same as SGI STL, we use ___iterative merge sort___ algorithm to effectively sort the elements with ___O(nlog(n))___. To avoid re-construction of elements, we just adjust the pointers internally, and sorting 100,000,000 elements costs only 10+ seconds!   
-&emsp;___make_heap___: Just start from the last node that is not leaf, then adjust each sub-tree  until root node is adjusted, so that the property of heap is maintained. The time complexity of this algorithm is ___O(n)___ since each adjust on sub-tree takes ___O(h)___ time consumption, where h stands for the height of the heap.
+&emsp;&emsp;Generally, we adopt the ___quick sort___ algorithm and some optimization work were done to handle the extreme cases.  
+&emsp;&emsp;Firstly, the program use the so called ___introspective sort___ method to get a rough result. Then the ___insertion sort___ were carried out to get final result. If the operating sequence deteriorated with too much nesting, ___heap sort___ algorithm will be used to eliminate unnecessary recursive calls.  
+&emsp;___list_sort___:  
+&emsp;&emsp;As we don't have to operate on internal data, I thought of the ___inplace merge___ method. Although the inplace merge method based on list is free of the heavy cost when reversing the data blocks,  it suffers from the expense to traverse to the middle of the list every time when the iteration step is called.   
+&emsp;&emsp;Learning from SGI STL, we use a different style of  ___iterative merge sort___ algorithm to effectively sort the elements with ___O(nlog(n))___ time complexity and ___O(1)___ space complexity. In this way, the data nodes were merged in sequence, and the  ___continuously merging___ of sub-sequence acts just like the ___carry-over___ of binary numbers when doing addition. Thus, we were examed from unnecessary traversal. The testing results shows that sorting 100,000,000 elements only costs 10+ seconds!   
+&emsp;___make_heap___:  
+&emsp;&emsp;Just start from the last node that is not leaf, then adjust each sub-tree  until root node is adjusted, so that the property of heap is maintained. The time complexity of this algorithm is ___O(n)___ since each adjust on sub-tree takes ___O(h)___ time consumption, where h stands for the height of the heap.
 
 ## Testing Commands
 &emsp;Just cd to "___/script/___" and type "___python3 test-XXX.py___ to run corresponding tests. These python scripts are based on following commands:  
 &emsp;Compile: g++ -std=c++11 -O2 test/XXX/YYY.cc -o results/XXX/YYY.exe  
 &emsp;common check: ./results/XXX/YYY.exe > ./results/XXX/YYY.txt  
-&emsp;memory check: ___valgrind___ --tool=memcheck --leak-check=full ./results/XXX/YYY.exe > ./results/XXX/YYY.txt  
+&emsp;memory check: ___valgrind___ --tool=memcheck --leak-check=full ./results/XXX/YYY.exe > ./results/XXX/YYY.txt   
 &emsp;As the testing scripts don't carry out memory checking work, you need to use valgrind manually or modify related scripts.
 
 ## Declaration

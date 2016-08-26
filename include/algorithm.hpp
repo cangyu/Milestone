@@ -10,7 +10,7 @@
 
 namespace sjtu
 {
-	template<typename T>
+	template<class T>
 	const T& _median_of_three(const T &a, const T &b, const T &c)
 	{
 		return a < b ? (b < c ? b : (a < c ? c : a)) : (a < c ? a : (b < c ? c : b));
@@ -19,7 +19,7 @@ namespace sjtu
 	template<class VecIter, class T>
 	VecIter _partition(VecIter first, VecIter last, T pivot)
 	{
-		for(;;)
+		for (;;)
 		{
 			while (*first < pivot)
 				++first;
@@ -28,7 +28,7 @@ namespace sjtu
 			if (last - first <= 0)
 				return first;
 
-			std::swap(first, last);
+			std::swap(*first, *last);
 			++first;
 		}
 	}
@@ -45,8 +45,8 @@ namespace sjtu
 
 			--depth_limit;
 
-			VecIter cut = _partition(beg, end, _median_of_three(*beg, *(beg + (end - beg) / 2), *(end - 1)));
-			_introspective_sort(cut, end, depth_limit);//对右半段进行递归
+			VecIter cut = sjtu::_partition(beg, end, _median_of_three(*beg, *(beg + (end - beg) / 2), *(end - 1)));
+			sjtu::_introspective_sort(cut, end, comp, depth_limit);//对右半段进行递归
 			end = cut;//回到while继续处理左半段
 		}
 	}
@@ -62,23 +62,19 @@ namespace sjtu
 			if (comp(val, *first))
 			{
 				for (auto p = t; p != first; --p)
-				{
 					*p = *(p - 1);
-					(p - 1)->~(typename VecIter::value_type)();
-				}
 				*first = val;
 			}
 			else
 			{
-				auto next = last;
-				--next;
-				while (comp(val, *next))
+				auto p = t - 1, q = t;
+				while (comp(val, *p))//assume to place val in q
 				{
-					*last = *next;
-					last = next;
-					--next;
+					*q = *p;
+					q = p;
+					--p;
 				}
-				*last = val;
+				*q = val;
 			}
 		}
 	}
@@ -96,7 +92,7 @@ namespace sjtu
 	template<class VecIter>
 	void sort(VecIter beg, VecIter end)
 	{
-		sort(beg, end, std::less<typename VecIter::value_type>());
+		sjtu::sort(beg, end, std::less<>());
 	}
 
 	template<class VecIter>
@@ -156,7 +152,34 @@ namespace sjtu
 	template<class VecIter, class Compare>
 	void _heap_sort(VecIter first, VecIter last, Compare comp)
 	{
+		sjtu::make_heap(first, last, comp);
 
+		int len = last - first;
+		while (last - first > 1)
+		{
+			--last;
+			--len;
+
+			std::swap(*first, *last);
+			int hole = 0;
+			int child = 2 * hole + 1;
+
+			while (child < len)//percolate down from 0
+			{
+				if (child + 1 < len && comp(*(first + child), *(first + child + 1)))
+					++child;
+
+				if (comp(*(first + hole), *(first + child)))
+				{
+					std::swap(*(first + hole), *(first + child));
+					hole = child;
+					child = 2 * hole + 1;//left child
+				}
+				else
+					break;
+			}
+
+		}
 	}
 
 }

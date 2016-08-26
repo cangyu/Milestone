@@ -68,8 +68,6 @@ namespace sjtu
 			int index;
 
 		public:
-			typedef T value_type;
-
 			iterator(vector<T> *_a = nullptr, T *_s = nullptr, int _i = 0) :
 				ascription(_a),
 				start(_s),
@@ -209,8 +207,6 @@ namespace sjtu
 			int index;
 
 		public:
-			typedef T value_type;
-
 			const_iterator(const vector<T> *_a = nullptr, T *_s = nullptr, int _i = 0) :
 				ascription(_a),
 				start(_s),

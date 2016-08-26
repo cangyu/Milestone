@@ -56,6 +56,11 @@ void TestStdVectorSort()
 	}
 	std::sort(a.begin(), a.end(), greater<int>());
 	sjtu::sort(b.begin(), b.end(), greater<int>());
+	for (int i = 0; i < sizeN; ++i) {
+		if (a[i] != b[i]) {
+			throw "sort std::vector failed";
+		}
+	}
 }
 
 void TestSjtuVector()
@@ -120,6 +125,5 @@ int main()
 	}
 	cout << "pass all" << endl;
 
-	//system("pause");
 	return 0;
 }

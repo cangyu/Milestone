@@ -10,91 +10,6 @@
 
 namespace sjtu
 {
-	template<class T>
-	const T& _median_of_three(const T &a, const T &b, const T &c)
-	{
-		return a < b ? (b < c ? b : (a < c ? c : a)) : (a < c ? a : (b < c ? c : b));
-	}
-
-	template<class VecIter, class T>
-	VecIter _partition(VecIter first, VecIter last, T pivot)
-	{
-		for (;;)
-		{
-			while (*first < pivot)
-				++first;
-			do { --last; } while (pivot < *last);
-
-			if (last - first <= 0)
-				return first;
-
-			std::swap(*first, *last);
-			++first;
-		}
-	}
-
-	template<class VecIter, class Compare>
-	void _introspective_sort(VecIter beg, VecIter end, Compare comp, int depth_limit)
-	{
-		const static size_t _threshold = 16;
-
-		while (end - beg > _threshold)
-		{
-			if (depth_limit <= 0)
-				_heap_sort(beg, end, comp);
-
-			--depth_limit;
-
-			VecIter cut = sjtu::_partition(beg, end, _median_of_three(*beg, *(beg + (end - beg) / 2), *(end - 1)));
-			sjtu::_introspective_sort(cut, end, comp, depth_limit);//对右半段进行递归
-			end = cut;//回到while继续处理左半段
-		}
-	}
-
-	template<class VecIter, class Compare>
-	void _insertion_sort(VecIter first, VecIter last, Compare comp)
-	{
-		if (first == last) return;
-
-		for (auto t = first + 1; t != last; ++t)
-		{
-			auto val = *t;
-			if (comp(val, *first))
-			{
-				for (auto p = t; p != first; --p)
-					*p = *(p - 1);
-				*first = val;
-			}
-			else
-			{
-				auto p = t - 1, q = t;
-				while (comp(val, *p))//assume to place val in q
-				{
-					*q = *p;
-					q = p;
-					--p;
-				}
-				*q = val;
-			}
-		}
-	}
-
-	template<class VecIter, class Compare>
-	void sort(VecIter beg, VecIter end, Compare comp)
-	{
-		if (beg != end)
-		{
-			_introspective_sort(beg, end, comp, 2 * (int)(std::floor(std::log2(end - beg))));
-			_insertion_sort(beg, end, comp);
-		}
-	}
-
-	template<class VecIter>
-	void sort(VecIter beg, VecIter end)
-	{
-		sjtu::sort(beg, end, std::less<>());
-	}
-
 	template<class VecIter>
 	void make_heap(VecIter beg, VecIter end)
 	{
@@ -182,6 +97,90 @@ namespace sjtu
 		}
 	}
 
+	template<class T>
+	const T& _median_of_three(const T &a, const T &b, const T &c)
+	{
+		return a < b ? (b < c ? b : (a < c ? c : a)) : (a < c ? a : (b < c ? c : b));
+	}
+
+	template<class VecIter, class T>
+	VecIter _partition(VecIter first, VecIter last, T pivot)
+	{
+		for (;;)
+		{
+			while (*first < pivot)
+				++first;
+			do { --last; } while (pivot < *last);
+
+			if (last - first <= 0)
+				return first;
+
+			std::swap(*first, *last);
+			++first;
+		}
+	}
+
+	template<class VecIter, class Compare>
+	void _introspective_sort(VecIter beg, VecIter end, Compare comp, int depth_limit)
+	{
+		const static size_t _threshold = 16;
+
+		while (end - beg > _threshold)
+		{
+			if (depth_limit <= 0)
+				_heap_sort(beg, end, comp);
+
+			--depth_limit;
+
+			VecIter cut = sjtu::_partition(beg, end, _median_of_three(*beg, *(beg + (end - beg) / 2), *(end - 1)));
+			sjtu::_introspective_sort(cut, end, comp, depth_limit);//对右半段进行递归
+			end = cut;//回到while继续处理左半段
+		}
+	}
+
+	template<class VecIter, class Compare>
+	void _insertion_sort(VecIter first, VecIter last, Compare comp)
+	{
+		if (first == last) return;
+
+		for (auto t = first + 1; t != last; ++t)
+		{
+			auto val = *t;
+			if (comp(val, *first))
+			{
+				for (auto p = t; p != first; --p)
+					*p = *(p - 1);
+				*first = val;
+			}
+			else
+			{
+				auto p = t - 1, q = t;
+				while (comp(val, *p))//assume to place val in q
+				{
+					*q = *p;
+					q = p;
+					--p;
+				}
+				*q = val;
+			}
+		}
+	}
+
+	template<class VecIter, class Compare>
+	void sort(VecIter beg, VecIter end, Compare comp)
+	{
+		if (beg != end)
+		{
+			_introspective_sort(beg, end, comp, 2 * (int)(std::floor(std::log2(end - beg))));
+			_insertion_sort(beg, end, comp);
+		}
+	}
+
+	template<class VecIter>
+	void sort(VecIter beg, VecIter end)
+	{
+		sjtu::sort(beg, end, std::less<>());
+	}
 }
 
 #endif
